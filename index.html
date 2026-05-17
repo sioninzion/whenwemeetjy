@@ -263,6 +263,7 @@
     .cal-cell:active  { background: var(--blue-light); }
     .cal-cell.empty   { border-color: transparent; background: transparent; cursor: default; pointer-events: none; }
     .cal-cell.today   { border-color: var(--blue); background: var(--blue-light); }
+    .cal-cell.past    { opacity: 0.35; }
     .cal-cell.sat .cal-date-num { color: var(--blue); }
     .cal-cell.sun .cal-date-num { color: var(--red);  }
     .cal-date-num { font-size: 10px; font-weight: 700; line-height: 1.1; }
@@ -299,9 +300,9 @@
 
     /* 랭크 텍스트 2 */
     .summary-rank-wrap {
-      flex: 0 0 10vh; min-height: 42px;
+      flex: 0 0 38px;
       display: flex; align-items: center; padding: 0 14px;
-      background: var(--white); border-radius: 10px; margin: 4px 12px;
+      background: var(--white); border-radius: 10px; margin: 0 12px;
       box-shadow: var(--shadow);
     }
     .rank-text { font-size: 13px; font-weight: 700; color: var(--blue); line-height: 1.4; }
@@ -742,12 +743,9 @@
       </div>
     </div>
 
-    <!-- 겹치는 시간 마퀴 텍스트 -->
-    <div class="summary-slide-wrap">
-      <span class="marquee-icon">⏰</span>
-      <div class="marquee-outer">
-        <span class="marquee-inner" id="summary-marquee">전체와 겹치는 시간대를 계산 중입니다...</span>
-      </div>
+    <!-- 내 일정 겹침 안내 -->
+    <div class="summary-rank-wrap">
+      <div class="rank-text" id="summary-rank">🏆 공통 시간대를 계산 중입니다...</div>
     </div>
 
     <!-- 조회 / 통계 / 수정 버튼 -->
@@ -1393,6 +1391,7 @@ function renderCalendar() {
   grid.innerHTML = '';
 
   const today     = new Date();
+  const todayStr  = toDateStr(today.getFullYear(), today.getMonth() + 1, today.getDate());
   const isCurMo   = today.getFullYear() === YEAR && today.getMonth() + 1 === m;
   const numDays   = daysInMonth(YEAR, m);
   const offset    = monthStartOffset(YEAR, m);
@@ -1413,9 +1412,10 @@ function renderCalendar() {
     const isSat    = dkIdx === 5;
     const isSun    = dkIdx === 6;
     const isToday  = isCurMo && today.getDate() === d;
+    const isPast   = dateStr < todayStr;
 
     const cell = document.createElement('div');
-    cell.className = `cal-cell${isSat?' sat':''}${isSun?' sun':''}${isToday?' today':''}`;
+    cell.className = `cal-cell${isSat?' sat':''}${isSun?' sun':''}${isToday?' today':''}${isPast?' past':''}`;
 
     // 날짜 번호
     const dateEl = document.createElement('div');
@@ -1503,7 +1503,7 @@ function renderBottomSummary() {
   if (!S.member) return;
   if (!S.availMap) S.availMap = calculateAvailabilityMap();
 
-  setMarquee(buildMarqueeText());
+  document.getElementById('summary-rank').textContent = buildRankText();
   renderTopDates();
 }
 
@@ -1600,10 +1600,13 @@ function buildMarqueeText() {
 
 /** 날짜별 가능 인원 TOP 4 계산 */
 function calculateTopDates() {
+  const today = new Date();
+  const todayStr = toDateStr(today.getFullYear(), today.getMonth() + 1, today.getDate());
   const dateCountMap = {};
   MONTHS.forEach(m => {
     for (let d = 1; d <= daysInMonth(YEAR, m); d++) {
       const ds = toDateStr(YEAR, m, d);
+      if (ds < todayStr) continue;
       const count = Object.keys(S.allSched).filter(name => {
         const pat = patternForDate(S.allSched[name], ds);
         return pat && Object.values(pat).some(v => v === 'available');
@@ -1651,7 +1654,7 @@ function buildRankText() {
       return p && p[slot] === 'available';
     });
     if (match) {
-      labels.push(count === cplt && cplt > 0 ? '전체' : `${rank}위`);
+      labels.push(`${rank}위`);
     }
   });
 
@@ -2129,9 +2132,12 @@ window.backToInputFromException = function() {
 function calculateStatRanking() {
   if (!S.availMap) S.availMap = calculateAvailabilityMap();
 
+  const today = new Date();
+  const todayStr = toDateStr(today.getFullYear(), today.getMonth() + 1, today.getDate());
   const allRanges = [];
 
   Object.keys(S.availMap).sort().forEach(ds => {
+    if (ds < todayStr) return;
     let curStart = null, curEnd = null, curKey = null, curMembers = null;
 
     TIME_SLOTS.forEach(slot => {
