@@ -275,12 +275,12 @@
       flex: 1; display: flex; flex-direction: column;
       background: var(--bg); overflow: hidden; min-height: 0;
     }
-    .bottom-gap-top    { flex: 0 0 1vh; }
-    .bottom-gap-bottom { flex: 0 0 4vh; }
+    .bottom-gap-top    { flex: 0 0 5px; }
+    .bottom-gap-bottom { flex: 0 0 0px; }
 
     /* 슬라이딩 텍스트 1 */
     .summary-slide-wrap {
-      flex: 0 0 10vh; min-height: 42px;
+      flex: 0 0 38px;
       display: flex; align-items: center;
       background: var(--white); border-radius: 10px; margin: 0 12px;
       box-shadow: var(--shadow); overflow: hidden;
@@ -306,18 +306,43 @@
     }
     .rank-text { font-size: 13px; font-weight: 700; color: var(--blue); line-height: 1.4; }
 
+    /* 공통 가능 날짜 TOP 4 카드 */
+    .top-dates-wrap { padding: 0 12px 5px; flex-shrink: 0; }
+    .top-dates-card {
+      background: var(--white); border-radius: 10px;
+      padding: 7px 12px; box-shadow: var(--shadow);
+    }
+    .top-dates-title { font-size: 11.5px; font-weight: 800; color: var(--blue); margin-bottom: 3px; }
+    .top-dates-row {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 11.5px; color: var(--text); padding: 1px 0;
+    }
+    .top-dates-row span:last-child { font-size: 11px; color: var(--text-muted); font-weight: 700; }
+
+    /* 특수사항 요약 박스 (입력 화면) */
+    .exc-summary-box {
+      background: var(--white); border-radius: 10px;
+      border: 1.5px solid var(--border); padding: 12px 14px; margin-top: 12px;
+    }
+    .exc-summary-title { font-size: 13px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+    .exc-summary-item { padding: 6px 0; border-bottom: 0.5px solid var(--border); }
+    .exc-summary-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .exc-summary-date { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+    .exc-summary-line { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
     /* 하단 버튼 */
     .main-action-row {
-      flex: 0 0 10vh; min-height: 52px;
-      display: flex; gap: 10px; padding: 4px 12px;
+      flex: 0 0 48px;
+      display: flex; gap: 8px; padding: 4px 12px;
     }
     .main-act-btn {
-      flex: 1; border: none; border-radius: 14px; font-size: 16px;
+      flex: 1; border: none; border-radius: 12px; font-size: 14px;
       font-weight: 800; cursor: pointer; transition: var(--tr);
     }
     .main-act-btn:active { transform: scale(0.96); }
-    .btn-view { background: var(--blue);     color: #fff; }
-    .btn-edit { background: var(--gray-dark); color: #fff; }
+    .btn-view  { background: var(--blue);     color: #fff; }
+    .btn-stats { background: #7C3AED;         color: #fff; }
+    .btn-edit  { background: var(--gray-dark); color: #fff; }
 
     /* ============================================================
        5. 입력 스크린 (요일 탭)
@@ -371,7 +396,7 @@
     /* ============================================================
        6. 시간 입력 스크린
        ============================================================ */
-    #screen-time { background: var(--white); }
+    #screen-time { height: 100dvh; height: 100vh; overflow: hidden; background: var(--white); }
     .time-header {
       display: flex; align-items: center; gap: 10px;
       padding: 12px 14px; background: var(--white);
@@ -383,8 +408,7 @@
 
     /* 시간 입력 본체 */
     .time-body {
-      display: flex; flex: 1; overflow: hidden;
-      height: calc(100vh - 58px - 64px); /* header + save bar */
+      display: flex; flex: 1; overflow: hidden; min-height: 0;
     }
     /* 왼쪽: 스크롤 가능한 시간 슬롯 열 */
     .time-slots-col {
@@ -430,6 +454,13 @@
       padding: 10px 14px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
       background: var(--white); box-shadow: 0 -2px 8px rgba(0,0,0,0.08); flex-shrink: 0;
     }
+
+    /* 전체 가능/불가 빠른 채우기 바 */
+    .time-quick-bar {
+      display: flex; gap: 8px; padding: 6px 14px; flex-shrink: 0;
+      background: var(--white); border-top: 1px solid var(--border);
+    }
+    .time-quick-bar .btn { flex: 1; padding: 8px 6px; font-size: 13px; font-weight: 700; border-radius: 10px; }
 
     /* ============================================================
        7. 특수사항 (예외 날짜) 스크린
@@ -703,6 +734,14 @@
   <div class="main-bottom">
     <div class="bottom-gap-top"></div>
 
+    <!-- 공통 가능 날짜 TOP 4 -->
+    <div class="top-dates-wrap">
+      <div class="top-dates-card">
+        <div class="top-dates-title">🏆 공통 가능 날짜 TOP 4</div>
+        <div id="top-dates-list"><div style="font-size:11px;color:var(--text-muted)">데이터 로딩 중...</div></div>
+      </div>
+    </div>
+
     <!-- 겹치는 시간 마퀴 텍스트 -->
     <div class="summary-slide-wrap">
       <span class="marquee-icon">⏰</span>
@@ -711,15 +750,11 @@
       </div>
     </div>
 
-    <!-- 랭크 겹침 텍스트 -->
-    <div class="summary-rank-wrap">
-      <div class="rank-text" id="summary-rank">🏆 공통 시간대를 계산 중입니다...</div>
-    </div>
-
-    <!-- 조회 / 수정 버튼 -->
+    <!-- 조회 / 통계 / 수정 버튼 -->
     <div class="main-action-row">
-      <button class="main-act-btn btn-view" onclick="openViewScreen()">🔍 조회</button>
-      <button class="main-act-btn btn-edit" onclick="openInputScreen()">✏️ 수정</button>
+      <button class="main-act-btn btn-view"  onclick="openViewScreen()">🔍 조회</button>
+      <button class="main-act-btn btn-stats" onclick="openStatsModal()">📊 통계</button>
+      <button class="main-act-btn btn-edit"  onclick="openInputScreen()">✏️ 수정</button>
     </div>
 
     <div class="bottom-gap-bottom"></div>
@@ -767,6 +802,9 @@
       <strong style="color:var(--red)">연한 빨강</strong> = 미입력 &nbsp;|&nbsp;
       <strong style="color:var(--green-dark)">초록</strong> = 완료
     </div>
+
+    <!-- 특수사항 요약 -->
+    <div id="exc-summary-wrap"></div>
   </div>
 
   <!-- 하단 고정 버튼 -->
@@ -806,6 +844,12 @@
     </div>
   </div>
 
+  <!-- 전체 가능 / 전체 불가 버튼 -->
+  <div class="time-quick-bar">
+    <button class="btn btn-success" onclick="fillAll('available')">✅ 전체 가능</button>
+    <button class="btn btn-danger"  onclick="fillAll('unavailable')">✗ 전체 불가</button>
+  </div>
+
   <div class="time-save-bar">
     <button class="btn btn-success btn-full" id="time-save-btn" onclick="saveTimeInput()" disabled
             style="opacity:0.45">
@@ -819,7 +863,7 @@
      ============================================================ -->
 <div id="screen-exception" class="screen">
   <div class="top-bar">
-    <button class="back-btn" onclick="showScreen('screen-input')">‹</button>
+    <button class="back-btn" onclick="backToInputFromException()">‹</button>
     <div class="top-bar-info">
       <div class="top-bar-title">특수사항 (예외 날짜)</div>
       <div class="top-bar-subtitle">기본 요일 패턴과 다른 특정 날짜를 지정하세요</div>
@@ -1050,6 +1094,25 @@ function mergeRanges(pattern) {
   });
   if (start) ranges.push(`${start} ~ ${addHalf(last)}`);
   return ranges;
+}
+
+/** 상태별 연속 범위: { available: [...], unavailable: [...], tentative: [...] } */
+function mergeRangesByStatus(pattern) {
+  const result = { available: [], unavailable: [], tentative: [] };
+  if (!pattern) return result;
+  ['available', 'unavailable', 'tentative'].forEach(status => {
+    let start = null, last = null;
+    TIME_SLOTS.forEach(slot => {
+      if (pattern[slot] === status) {
+        if (!start) start = slot;
+        last = slot;
+      } else {
+        if (start) { result[status].push(`${start} ~ ${addHalf(last)}`); start = null; last = null; }
+      }
+    });
+    if (start) result[status].push(`${start} ~ ${addHalf(last)}`);
+  });
+  return result;
 }
 
 /** 날짜 표시 형식: "5월 13일 수요일" */
@@ -1441,7 +1504,7 @@ function renderBottomSummary() {
   if (!S.availMap) S.availMap = calculateAvailabilityMap();
 
   setMarquee(buildMarqueeText());
-  document.getElementById('summary-rank').textContent = buildRankText();
+  renderTopDates();
 }
 
 /** 가용성 맵: { dateStr: { slot: [memberName, ...] } } */
@@ -1535,6 +1598,46 @@ function buildMarqueeText() {
   return calculateUserOverlap();
 }
 
+/** 날짜별 가능 인원 TOP 4 계산 */
+function calculateTopDates() {
+  const dateCountMap = {};
+  MONTHS.forEach(m => {
+    for (let d = 1; d <= daysInMonth(YEAR, m); d++) {
+      const ds = toDateStr(YEAR, m, d);
+      const count = Object.keys(S.allSched).filter(name => {
+        const pat = patternForDate(S.allSched[name], ds);
+        return pat && Object.values(pat).some(v => v === 'available');
+      }).length;
+      if (count > 0) dateCountMap[ds] = count;
+    }
+  });
+  return Object.entries(dateCountMap)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 4)
+    .map(([ds, count], i) => ({ rank: i + 1, ds, count }));
+}
+
+/** TOP 4 날짜 카드 렌더링 */
+function renderTopDates() {
+  const listEl = document.getElementById('top-dates-list');
+  if (!listEl) return;
+  const totalMembers = Object.keys(S.allSched).length;
+  const top = calculateTopDates();
+  if (top.length === 0) {
+    listEl.innerHTML = '<div style="font-size:11px;color:var(--text-muted)">공통 가능 날짜 정보가 없습니다.</div>';
+    return;
+  }
+  const medals = ['🥇', '🥈', '🥉', '4위'];
+  listEl.innerHTML = top.map(({ rank, ds, count }) => {
+    const [, m, d] = ds.split('-').map(Number);
+    const isAll = totalMembers > 0 && count === totalMembers;
+    return `<div class="top-dates-row">
+      <span>${medals[rank - 1]} ${m}월 ${d}일</span>
+      <span>${count}명 가능${isAll ? ' 🎉' : ''}</span>
+    </div>`;
+  }).join('');
+}
+
 /** 랭크 겹침 텍스트 */
 function buildRankText() {
   const ranks  = calculateTopRankedTimes();
@@ -1567,6 +1670,7 @@ function openInputScreen() {
   document.getElementById('itab-6').classList.remove('active');
   renderWeekdayTabs();
   updateProgress();
+  renderExceptionSummary();
   showScreen('screen-input');
 }
 window.openInputScreen = openInputScreen;
@@ -1731,6 +1835,17 @@ function updateStatusBtns() {
   });
 }
 
+/** 전체 시간 슬롯을 한 번에 채우기 */
+function fillAll(status) {
+  document.querySelectorAll('.time-row-bar').forEach(bar => {
+    bar.className = `time-row-bar ${status}`;
+    bar.dataset.st = status;
+  });
+  updateFillCount();
+  checkTimeSaveBtn();
+}
+window.fillAll = fillAll;
+
 
 // ================================================================
 //   시간 입력 저장 (saveTimeInput)
@@ -1761,9 +1876,11 @@ function saveTimeInput() {
   if (S.prevScreen === 'screen-input') {
     renderWeekdayTabs();
     updateProgress();
+    renderExceptionSummary();
   } else if (S.prevScreen === 'screen-exception') {
     renderExcCalendar();
     renderExcList();
+    renderExceptionSummary();
   }
   showScreen(S.prevScreen);
 }
@@ -1809,6 +1926,7 @@ async function saveTemp() {
     await setDoc(doc(db, 'rooms', S.room.roomCode, 'schedules', S.member), data);
     S.mySched.tempSaved = true;
     S.allSched[S.member] = data;
+    renderExceptionSummary();
     toast('💾 임시 저장되었습니다');
   } catch (e) { console.error(e); toast('저장 실패: ' + e.message); }
 }
@@ -1842,7 +1960,7 @@ async function saveAvailability() {
     S.allSched[S.member] = data;
     S.availMap = null;
     toast(isAllDone ? '✅ 입력 완료! 저장되었습니다' : '저장되었습니다');
-    setTimeout(() => { renderCalendar(); renderBottomSummary(); showScreen('screen-main'); }, 600);
+    setTimeout(() => { renderCalendar(); renderBottomSummary(); renderTopDates(); showScreen('screen-main'); }, 600);
   } catch (e) { console.error(e); toast('저장 실패: ' + e.message); }
 }
 window.saveAvailability = saveAvailability;
@@ -1947,6 +2065,7 @@ window.deleteException = function(ds) {
   delete S.mySched.exceptions[ds];
   renderExcCalendar();
   renderExcList();
+  renderExceptionSummary();
   toast('예외 날짜가 삭제되었습니다');
 };
 
@@ -1956,6 +2075,138 @@ function saveException(dateStr, pattern) {
   renderExcCalendar();
   renderExcList();
 }
+
+/** 특수사항 요약 렌더링 (screen-input 하단) */
+function renderExceptionSummary() {
+  const wrap = document.getElementById('exc-summary-wrap');
+  if (!wrap) return;
+  const exceptions = S.mySched.exceptions || {};
+  const keys = Object.keys(exceptions).sort();
+  const statusLabel = { available: '가능', unavailable: '불가', tentative: '미확정' };
+
+  if (keys.length === 0) {
+    wrap.innerHTML = `<div class="exc-summary-box">
+      <div class="exc-summary-title">📋 내가 기록한 특수사항</div>
+      <div style="color:var(--text-muted);font-size:13px">기록된 특수사항이 없습니다.</div>
+    </div>`;
+    return;
+  }
+
+  let html = `<div class="exc-summary-box"><div class="exc-summary-title">📋 내가 기록한 특수사항</div>`;
+  keys.forEach(ds => {
+    const pattern = exceptions[ds];
+    const values = TIME_SLOTS.map(s => pattern[s]).filter(Boolean);
+    const allSame = values.length === TIME_SLOTS.length && new Set(values).size === 1;
+
+    html += `<div class="exc-summary-item"><div class="exc-summary-date">${fmtDate(ds)}</div>`;
+    if (allSame) {
+      html += `<div class="exc-summary-line">하루 전체 ${statusLabel[values[0]] || values[0]}</div>`;
+    } else {
+      const ranges = mergeRangesByStatus(pattern);
+      if (ranges.available.length)   html += `<div class="exc-summary-line" style="color:var(--green-dark)">가능: ${ranges.available.join(', ')}</div>`;
+      if (ranges.unavailable.length) html += `<div class="exc-summary-line" style="color:var(--red)">불가: ${ranges.unavailable.join(', ')}</div>`;
+      if (ranges.tentative.length)   html += `<div class="exc-summary-line" style="color:var(--amber)">미확정: ${ranges.tentative.join(', ')}</div>`;
+    }
+    html += `</div>`;
+  });
+  html += `</div>`;
+  wrap.innerHTML = html;
+}
+window.renderExceptionSummary = renderExceptionSummary;
+
+/** 특수사항 화면 → 입력 화면 뒤로가기 (요약 갱신 포함) */
+window.backToInputFromException = function() {
+  renderExceptionSummary();
+  showScreen('screen-input');
+};
+
+
+// ================================================================
+//   통계 모달 — 겹치는 인원 기준 시간대 TOP 5
+// ================================================================
+
+/** 날짜별·연속 슬롯별로 동일 멤버 구간을 병합하여 TOP 5 카운트 레벨 반환 */
+function calculateStatRanking() {
+  if (!S.availMap) S.availMap = calculateAvailabilityMap();
+
+  const allRanges = [];
+
+  Object.keys(S.availMap).sort().forEach(ds => {
+    let curStart = null, curEnd = null, curKey = null, curMembers = null;
+
+    TIME_SLOTS.forEach(slot => {
+      const members = S.availMap[ds][slot];
+      if (!members || members.length === 0) {
+        if (curStart !== null) {
+          allRanges.push({ ds, startSlot: curStart, endSlot: curEnd, members: curMembers, count: curMembers.length });
+          curStart = null; curKey = null;
+        }
+        return;
+      }
+      const sorted = sortKo(members);
+      const key    = sorted.join('␟');
+      if (curKey === key) {
+        curEnd = slot;
+      } else {
+        if (curStart !== null) {
+          allRanges.push({ ds, startSlot: curStart, endSlot: curEnd, members: curMembers, count: curMembers.length });
+        }
+        curStart = slot; curEnd = slot; curKey = key; curMembers = sorted;
+      }
+    });
+    if (curStart !== null) {
+      allRanges.push({ ds, startSlot: curStart, endSlot: curEnd, members: curMembers, count: curMembers.length });
+    }
+  });
+
+  if (allRanges.length === 0) return [];
+
+  // 인원 많은 순 → 지속 시간 긴 순 → 날짜 빠른 순 → 시작 시간 빠른 순
+  allRanges.sort((a, b) => {
+    if (b.count !== a.count) return b.count - a.count;
+    const durA = TIME_SLOTS.indexOf(a.endSlot) - TIME_SLOTS.indexOf(a.startSlot);
+    const durB = TIME_SLOTS.indexOf(b.endSlot) - TIME_SLOTS.indexOf(b.startSlot);
+    if (durB !== durA) return durB - durA;
+    if (a.ds !== b.ds) return a.ds.localeCompare(b.ds);
+    return TIME_SLOTS.indexOf(a.startSlot) - TIME_SLOTS.indexOf(b.startSlot);
+  });
+
+  // 상위 5개 시간대 (동일 인원 수도 각각 순위로 표시)
+  return allRanges.slice(0, 5).map((r, i) => ({ rank: i + 1, ...r }));
+}
+
+function openStatsModal() {
+  const body     = document.getElementById('modal-body');
+  const ranks    = calculateStatRanking();
+  const medals   = ['🥇', '🥈', '🥉', '4위', '5위'];
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+
+  let html = `<div style="font-size:17px;font-weight:800;margin-bottom:14px">📊 공통 가능 시간대 TOP 5</div>`;
+
+  if (ranks.length === 0) {
+    html += `<div style="text-align:center;padding:24px 0;color:var(--text-muted);font-size:14px">아직 입력된 일정 데이터가 없습니다</div>`;
+  } else {
+    ranks.forEach(({ rank, count, members, ds, startSlot, endSlot }) => {
+      const [y, m, d] = ds.split('-').map(Number);
+      const dn        = dayNames[new Date(y, m - 1, d).getDay()];
+      const timeRange = `${startSlot} ~ ${addHalf(endSlot)}`;
+      const isLast    = rank === ranks.length;
+      html += `
+        <div style="padding:12px 0;${isLast ? '' : 'border-bottom:0.5px solid var(--border);'}">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <span style="font-size:15px;font-weight:800">${medals[rank - 1]} ${rank}위</span>
+            <span style="font-size:13px;font-weight:700;color:var(--blue);background:var(--blue-light);padding:2px 10px;border-radius:20px">${count}명 가능</span>
+          </div>
+          <div style="font-size:13px;color:var(--text);line-height:1.7;margin-bottom:4px">${members.join(', ')}</div>
+          <div style="font-size:12px;color:var(--text-muted)">📅 ${m}월 ${d}일 ${dn}요일 &nbsp; ⏰ ${timeRange}</div>
+        </div>`;
+    });
+  }
+
+  body.innerHTML = html;
+  document.getElementById('modal-overlay').classList.add('active');
+}
+window.openStatsModal = openStatsModal;
 
 
 // ================================================================
