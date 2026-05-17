@@ -563,9 +563,10 @@
 <div id="screen-landing" class="screen active">
   <div class="landing-emoji">📅</div>
   <h1 class="landing-title">우리는 언제 만나요</h1>
-  <p class="landing-sub">스킷드라마 공연팀<br>일정 조율 앱</p>
-  <div class="loading-wrap"><div class="spinner"></div></div>
-  <p style="font-size:13px;color:var(--text-muted);margin-top:8px">방 정보를 불러오는 중...</p>
+  <p class="landing-sub">일정을 공유하고<br>최적의 만남 시간을 찾아보세요</p>
+  <div class="landing-btns">
+    <button class="btn btn-primary btn-lg btn-full" onclick="goToJoin()">방 코드로 입장하기</button>
+  </div>
 </div>
 
 <!-- ============================================================
@@ -652,7 +653,7 @@
      ============================================================ -->
 <div id="screen-select" class="screen">
   <div class="top-bar">
-    <div style="width:36px"></div>
+    <button class="back-btn" onclick="showScreen('screen-landing')">‹</button>
     <div class="top-bar-info">
       <div class="top-bar-title" id="sel-room-name">방 이름</div>
       <div class="top-bar-subtitle">본인 이름을 선택하세요</div>
@@ -1135,11 +1136,15 @@ async function ensureDefaultRoom() {
     S.room = { ...DEFAULT_ROOM };
   } else {
     S.room = snap.data();
-    // members 누락 대비: DEFAULT_ROOM 값으로 보완
     if (!S.room.members) S.room.members = DEFAULT_ROOM.members;
   }
   await loadAllSchedules(DEFAULT_ROOM.roomCode);
 }
+
+// ================================================================
+//   랜딩 내비게이션
+// ================================================================
+window.goToJoin = () => showScreen('screen-join');
 
 // ================================================================
 //   사용자 변경 (changeUser)
@@ -1147,8 +1152,12 @@ async function ensureDefaultRoom() {
 function changeUser() {
   localStorage.removeItem('lastMemberName');
   S.member = null;
-  renderMemberGrid();
-  showScreen('screen-select');
+  if (S.room) {
+    renderMemberGrid();
+    showScreen('screen-select');
+  } else {
+    showScreen('screen-landing');
+  }
 }
 window.changeUser = changeUser;
 
@@ -1201,24 +1210,36 @@ window.createRoom = createRoom;
 //   Firebase: 방 입장
 // ================================================================
 async function joinRoom() {
-  const code = document.getElementById('join-code').value.trim().toUpperCase();
+  const code  = document.getElementById('join-code').value.trim().toUpperCase();
   if (!code) { toast('방 코드를 입력하세요'); return; }
   const errEl = document.getElementById('join-err');
+  const btn   = document.querySelector('#screen-join .form-footer .btn-primary');
   errEl.style.display = 'none';
+  if (btn) { btn.disabled = true; btn.textContent = '불러오는 중...'; }
+
   try {
-    const snap = await getDoc(doc(db, 'rooms', code));
-    if (!snap.exists()) {
-      errEl.textContent = '❌ 존재하지 않는 방 코드입니다';
-      errEl.style.display = 'block';
-      return;
+    if (code === DEFAULT_ROOM.roomCode) {
+      // 기본 방 0001: 없으면 자동 생성
+      await ensureDefaultRoom();
+    } else {
+      const snap = await getDoc(doc(db, 'rooms', code));
+      if (!snap.exists()) {
+        errEl.textContent = '❌ 존재하지 않는 방 코드입니다';
+        errEl.style.display = 'block';
+        return;
+      }
+      S.room = snap.data();
+      await loadAllSchedules(code);
     }
-    S.room = snap.data();
-    await loadAllSchedules(code);
+    localStorage.setItem('lastRoomCode', code);
     renderMemberGrid();
     showScreen('screen-select');
   } catch (e) {
     console.error(e);
-    toast('오류: ' + e.message);
+    errEl.textContent = '❌ 연결 오류가 발생했습니다. 다시 시도해주세요.';
+    errEl.style.display = 'block';
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '입장하기'; }
   }
 }
 window.joinRoom = joinRoom;
@@ -2010,21 +2031,30 @@ function renderResultView(memberName) {
 //   초기화
 // ================================================================
 updateStatusBtns();
+showScreen('screen-landing');
 
-// 기본 방 자동 로드 후 멤버 선택 화면 또는 메인 화면으로 이동
+// 새로고침 자동 복구 — 실패해도 랜딩 화면 유지, 오류 표시 없음
 (async () => {
+  const lastCode   = localStorage.getItem('lastRoomCode');
+  const lastMember = localStorage.getItem('lastMemberName');
+  if (!lastCode || !lastMember) return;
+
   try {
-    await ensureDefaultRoom();
-    const last = localStorage.getItem('lastMemberName');
-    if (last && DEFAULT_ROOM.members.includes(last)) {
-      await selectMember(last);
+    if (lastCode === DEFAULT_ROOM.roomCode) {
+      await ensureDefaultRoom();
     } else {
-      renderMemberGrid();
-      showScreen('screen-select');
+      const snap = await getDoc(doc(db, 'rooms', lastCode));
+      if (!snap.exists()) { localStorage.removeItem('lastRoomCode'); return; }
+      S.room = snap.data();
+      await loadAllSchedules(lastCode);
+    }
+    const members = S.room?.members || [];
+    if (members.includes(lastMember)) {
+      await selectMember(lastMember);
     }
   } catch (e) {
-    console.error('초기화 오류:', e);
-    toast('연결 오류가 발생했습니다. 새로고침 해주세요.');
+    // 자동 복구 실패: 랜딩 화면에서 대기 (토스트 없음)
+    console.warn('자동 복구 실패:', e);
   }
 })();
 
