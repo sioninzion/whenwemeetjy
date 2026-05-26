@@ -823,7 +823,7 @@
   <div class="time-header">
     <button class="back-btn" onclick="backFromTime()">‹</button>
     <div class="time-header-title" id="time-header-title">월요일 5월</div>
-    <div class="time-fill-count" id="time-fill-count">0/18</div>
+    <div class="time-fill-count" id="time-fill-count">0/29</div>
   </div>
 
   <div class="time-body">
@@ -1007,16 +1007,17 @@ const ROOM_0002 = {
   months:      MONTHS
 };
 
-// 시간 슬롯: 09:00 ~ 17:30, 30분 단위 → 총 18개 (1/2: 09:00~13:00, 2/2: 13:30~17:30)
+// 시간 슬롯: 09:00 ~ 23:00, 30분 단위 → 총 29개 (1/2: 09:00~16:00, 2/2: 16:30~23:00)
 function buildTimeSlots() {
   const s = [];
-  for (let h = 9; h <= 17; h++) {
+  for (let h = 9; h <= 23; h++) {
     s.push(`${pad2(h)}:00`);
-    s.push(`${pad2(h)}:30`);
+    if (h < 23) s.push(`${pad2(h)}:30`);
   }
   return s;
 }
-const TIME_SLOTS = buildTimeSlots(); // 18개
+const TIME_SLOTS = buildTimeSlots(); // 29개
+const TIME_PAGE_SIZE = Math.ceil(TIME_SLOTS.length / 2); // 15 (1/2), 14 (2/2)
 
 
 // ================================================================
@@ -1801,7 +1802,7 @@ function renderTimeGrid(fullPattern) {
   const col = document.getElementById('time-slots-col');
   col.innerHTML = '';
 
-  const pageSlots = TIME_SLOTS.slice((S.timePage - 1) * 9, S.timePage * 9);
+  const pageSlots = TIME_SLOTS.slice((S.timePage - 1) * TIME_PAGE_SIZE, S.timePage * TIME_PAGE_SIZE);
   pageSlots.forEach(slot => {
     const row = document.createElement('div');
     row.className = 'time-row';
