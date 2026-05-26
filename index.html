@@ -563,6 +563,48 @@
     .modal-member-times { font-size: 12.5px; color: var(--text-muted); line-height: 1.6; }
 
     /* ============================================================
+       불러오기 모달 (중앙 다이얼로그)
+       ============================================================ */
+    .import-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5); z-index: 600;
+      align-items: center; justify-content: center; padding: 24px;
+    }
+    .import-overlay.active { display: flex; }
+    .import-box {
+      background: var(--white); border-radius: 20px;
+      padding: 24px 20px; width: 100%; max-width: 340px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.28);
+      animation: popIn 0.18s ease;
+    }
+    @keyframes popIn { from { transform: scale(0.88); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .import-title { font-size: 15px; font-weight: 800; text-align: center; margin-bottom: 18px; color: var(--text); }
+    .import-room-btn {
+      width: 100%; background: var(--blue-light); border: 2px solid var(--blue);
+      border-radius: 12px; padding: 14px; font-size: 14px; font-weight: 800;
+      color: var(--blue); cursor: pointer; margin-bottom: 10px;
+      -webkit-tap-highlight-color: transparent; transition: var(--tr);
+    }
+    .import-room-btn:active { transform: scale(0.97); }
+    .import-cancel-btn {
+      width: 100%; background: var(--gray-light); border: none;
+      border-radius: 12px; padding: 13px; font-size: 14px; font-weight: 700;
+      color: var(--text-muted); cursor: pointer; margin-top: 4px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .import-confirm-row { display: flex; gap: 10px; margin-top: 4px; }
+    .import-no-btn {
+      flex: 1; background: var(--gray-light); border: none; border-radius: 12px;
+      padding: 14px; font-size: 15px; font-weight: 700; color: var(--text-muted);
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+    .import-yes-btn {
+      flex: 1; background: var(--blue); border: none; border-radius: 12px;
+      padding: 14px; font-size: 15px; font-weight: 800; color: #fff;
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ============================================================
        로딩 스피너
        ============================================================ */
     .loading-wrap { display: flex; align-items: center; justify-content: center; height: 100px; }
@@ -712,7 +754,7 @@
       <div class="main-greeting">안녕하세요, <span id="main-name">사용자</span>님!</div>
       <div style="display:flex;align-items:center;gap:6px;margin-top:1px">
         <div class="main-room-sub" id="main-room-sub" style="margin-top:0"></div>
-        <button onclick="changeUser()" style="background:var(--gray-light);border:none;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;color:var(--text-muted);cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent">변경</button>
+        <button onclick="showScreen('screen-join')" style="background:var(--gray-light);border:none;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;color:var(--text-muted);cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent">변경</button>
       </div>
     </div>
     <button class="btn btn-primary main-input-btn" onclick="openInputScreen()">입력하기</button>
@@ -823,6 +865,7 @@
   <div class="time-header">
     <button class="back-btn" onclick="backFromTime()">‹</button>
     <div class="time-header-title" id="time-header-title">월요일 5월</div>
+    <button id="import-btn" onclick="openImportModal()" style="display:none;background:var(--blue-light);border:none;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:800;color:var(--blue);cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent">불러오기</button>
     <div class="time-fill-count" id="time-fill-count">0/29</div>
   </div>
 
@@ -841,8 +884,9 @@
         <button class="stat-btn s-tentative" id="sBtn-tentative" onclick="selectStatus('tentative')">미확<br>?</button>
       </div>
       <div class="stat-row">
-        <button class="stat-btn s-page active" id="sBtn-page1" onclick="switchTimePage(1)">1/2</button>
-        <button class="stat-btn s-page" id="sBtn-page2" onclick="switchTimePage(2)">2/2</button>
+        <button class="stat-btn s-page active" id="sBtn-page1" onclick="switchTimePage(1)">-1-</button>
+        <button class="stat-btn s-page" id="sBtn-page2" onclick="switchTimePage(2)">-2-</button>
+        <button class="stat-btn s-page" id="sBtn-page3" onclick="switchTimePage(3)">-3-</button>
       </div>
     </div>
   </div>
@@ -919,6 +963,13 @@
   <div class="modal-sheet" onclick="event.stopPropagation()">
     <div class="modal-handle"></div>
     <div id="modal-body"></div>
+  </div>
+</div>
+
+<!-- 불러오기 모달 (중앙 다이얼로그) -->
+<div class="import-overlay" id="import-overlay" onclick="closeImportModal()">
+  <div class="import-box" onclick="event.stopPropagation()">
+    <div id="import-content"></div>
   </div>
 </div>
 
@@ -1007,7 +1058,7 @@ const ROOM_0002 = {
   months:      MONTHS
 };
 
-// 시간 슬롯: 09:00 ~ 23:00, 30분 단위 → 총 29개 (1/2: 09:00~16:00, 2/2: 16:30~23:00)
+// 시간 슬롯: 09:00 ~ 23:00, 30분 단위 → 총 29개 (-1-: 09:00~13:30, -2-: 14:00~18:30, -3-: 19:00~23:00)
 function buildTimeSlots() {
   const s = [];
   for (let h = 9; h <= 23; h++) {
@@ -1017,7 +1068,7 @@ function buildTimeSlots() {
   return s;
 }
 const TIME_SLOTS = buildTimeSlots(); // 29개
-const TIME_PAGE_SIZE = Math.ceil(TIME_SLOTS.length / 2); // 15 (1/2), 14 (2/2)
+const TIME_PAGE_SIZE = Math.ceil(TIME_SLOTS.length / 3); // 10 (-1-), 10 (-2-), 9 (-3-)
 
 
 // ================================================================
@@ -1792,6 +1843,7 @@ function openWeekdayTimeInput(dk, month) {
   S.selStatus = 'available';
   updateStatusBtns();
   updatePageBtns();
+  updateImportBtn();
   showScreen('screen-time');
 }
 
@@ -1852,6 +1904,7 @@ window.switchTimePage = switchTimePage;
 function updatePageBtns() {
   document.getElementById('sBtn-page1').classList.toggle('active', S.timePage === 1);
   document.getElementById('sBtn-page2').classList.toggle('active', S.timePage === 2);
+  document.getElementById('sBtn-page3').classList.toggle('active', S.timePage === 3);
 }
 
 /** 바에 현재 상태 적용 */
@@ -2108,6 +2161,7 @@ function openExcTimeInput(dateStr) {
   S.selStatus = 'available';
   updateStatusBtns();
   updatePageBtns();
+  updateImportBtn();
   showScreen('screen-time');
 }
 
@@ -2388,6 +2442,134 @@ showScreen('screen-landing');
     console.warn('자동 복구 실패:', e);
   }
 })();
+
+
+// ================================================================
+//   불러오기 (다른 방에서 내 일정 복사)
+// ================================================================
+
+/** 현재 멤버가 속한 다른 방 목록 반환 */
+function getOtherRoomsForMember(memberName) {
+  const allRooms = [DEFAULT_ROOM, ROOM_0002];
+  const currentCode = S.room?.roomCode;
+  return allRooms.filter(r => r.roomCode !== currentCode && r.members.includes(memberName));
+}
+
+/** 불러오기 버튼 표시 여부 갱신 */
+function updateImportBtn() {
+  const btn = document.getElementById('import-btn');
+  if (!btn) return;
+  const others = getOtherRoomsForMember(S.member);
+  btn.style.display = others.length ? 'inline-block' : 'none';
+}
+
+/** 불러오기 모달 열기 */
+function openImportModal() {
+  const otherRooms = getOtherRoomsForMember(S.member);
+  if (!otherRooms.length) return;
+  renderImportStep1(otherRooms);
+  document.getElementById('import-overlay').classList.add('active');
+}
+window.openImportModal = openImportModal;
+
+/** 1단계: 방 선택 */
+function renderImportStep1(rooms) {
+  const content = document.getElementById('import-content');
+  content.innerHTML = `
+    <div class="import-title">세션을 불러올 방을 선택하세요</div>
+    ${rooms.map(r => `
+      <button class="import-room-btn" onclick="renderImportStep2('${r.roomCode}','${encodeURIComponent(r.roomName)}')">
+        ${r.roomCode} · ${r.roomName}
+      </button>
+    `).join('')}
+    <button class="import-cancel-btn" onclick="closeImportModal()">취소</button>
+  `;
+}
+window.renderImportStep1 = renderImportStep1;
+
+/** 2단계: 확인 */
+function renderImportStep2(roomCode, roomNameEncoded) {
+  const roomName = decodeURIComponent(roomNameEncoded);
+  const content  = document.getElementById('import-content');
+  content.innerHTML = `
+    <div class="import-title">
+      정말 <span style="color:var(--blue)">${roomCode}방</span>의<br>
+      <span style="font-size:12px;font-weight:600;color:var(--text-muted)">(${roomName})</span><br>
+      설정을 불러오시겠습니까?
+    </div>
+    <div class="import-confirm-row">
+      <button class="import-no-btn"  onclick="closeImportModal()">아니오</button>
+      <button class="import-yes-btn" onclick="executeImport('${roomCode}')">네</button>
+    </div>
+  `;
+}
+window.renderImportStep2 = renderImportStep2;
+
+/** 실제 불러오기 실행 */
+async function executeImport(sourceRoomCode) {
+  const memberName     = S.member;
+  const targetRoomCode = S.room.roomCode;
+
+  try {
+    const sourceRef  = doc(db, 'rooms', sourceRoomCode, 'schedules', memberName);
+    const sourceSnap = await getDoc(sourceRef);
+
+    if (!sourceSnap.exists()) {
+      closeImportModal();
+      toast('해당 방에 저장된 일정이 없습니다');
+      return;
+    }
+
+    const src  = sourceSnap.data();
+    const data = {
+      memberName,
+      roomCode:      targetRoomCode,
+      weeklyPattern: src.weeklyPattern || {},
+      exceptions:    src.exceptions    || {},
+      tempSaved:     src.tempSaved     || false,
+      completed:     src.completed     || false,
+      updatedAt:     serverTimestamp()
+    };
+
+    await setDoc(doc(db, 'rooms', targetRoomCode, 'schedules', memberName), data);
+
+    S.mySched = {
+      weeklyPattern: data.weeklyPattern,
+      exceptions:    data.exceptions,
+      tempSaved:     data.tempSaved,
+      completed:     data.completed
+    };
+    S.allSched[memberName] = { ...data };
+    S.availMap = null;
+
+    closeImportModal();
+    toast(`✅ ${sourceRoomCode}방의 일정을 불러왔습니다!`);
+
+    // 현재 열려 있는 시간 입력 화면을 새 데이터로 갱신
+    const ctx = S.inputCtx;
+    if (ctx && ctx.type === 'weekday') {
+      const mk = `${YEAR}-${pad2(ctx.month)}-${ctx.dayKey}`;
+      S.timeEditPattern = { ...(S.mySched.weeklyPattern[mk] || {}) };
+    } else if (ctx && ctx.type === 'exception') {
+      S.timeEditPattern = { ...(S.mySched.exceptions[ctx.dateStr] || {}) };
+    }
+    renderTimeGrid(S.timeEditPattern);
+    updateFillCount();
+    checkTimeSaveBtn();
+
+  } catch (e) {
+    console.error(e);
+    closeImportModal();
+    toast('불러오기 실패: ' + e.message);
+  }
+}
+window.executeImport = executeImport;
+
+/** 불러오기 모달 닫기 */
+function closeImportModal() {
+  document.getElementById('import-overlay').classList.remove('active');
+}
+window.closeImportModal = closeImportModal;
 
 </script>
 </body>
