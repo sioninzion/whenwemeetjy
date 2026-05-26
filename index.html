@@ -411,9 +411,8 @@
     .time-body {
       display: flex; flex: 1; overflow: hidden; min-height: 0;
     }
-    /* 왼쪽: 스크롤 가능한 시간 슬롯 열 */
     .time-slots-col {
-      flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      flex: 1; overflow: hidden;
     }
     .time-row {
       display: flex; align-items: center; height: 46px;
@@ -1943,12 +1942,13 @@ function checkTimeSaveBtn() {
 
   document.addEventListener('touchmove', e => {
     if (!dragging) return;
+    e.preventDefault();
     const touch = e.touches[0];
     const el    = document.elementFromPoint(touch.clientX, touch.clientY);
     if (!el) return;
     const row = el.closest('.time-row');
     if (row) applyStatus(row.querySelector('.time-row-bar'));
-  }, { passive: true });
+  }, { passive: false });
 
   document.addEventListener('touchend', () => {
     if (!dragging) return;
