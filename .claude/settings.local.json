@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(\\(Get-Item \"c:\\\\Users\\\\nohsi\\\\OneDrive - 경희대학교\\\\바탕 화면\\\\HTMLS\\\\우리는 언제 만나요\\\\index.html\"\\).Length)"
+    ]
+  }
+}

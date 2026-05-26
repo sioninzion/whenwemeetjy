@@ -1,0 +1,2351 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#3B82F6">
+  <title>우리는 언제 만나요</title>
+  <style>
+    /* ============================================================
+       기본 리셋 & CSS 변수
+       ============================================================ */
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    :root {
+      --blue:        #3B82F6;
+      --blue-dark:   #2563EB;
+      --blue-light:  #EFF6FF;
+      --green:       #22C55E;
+      --green-dark:  #16A34A;
+      --green-light: #F0FDF4;
+      --red:         #EF4444;
+      --red-light:   #FEE2E2;
+      --amber:       #D97706;   /* 황토 계열 미확정 */
+      --amber-light: #FFFBEB;
+      --gray:        #9CA3AF;
+      --gray-dark:   #374151;
+      --gray-light:  #F3F4F6;
+      --white:       #FFFFFF;
+      --bg:          #F9FAFB;
+      --text:        #111827;
+      --text-muted:  #6B7280;
+      --border:      #E5E7EB;
+      --shadow:      0 2px 10px rgba(0,0,0,0.08);
+      --radius:      12px;
+      --tr:          all 0.18s ease;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
+                   'Noto Sans KR', 'Malgun Gothic', sans-serif;
+      background: var(--bg);
+      max-width: 480px;
+      margin: 0 auto;
+      color: var(--text);
+      font-size: 16px;
+      user-select: none;
+      -webkit-user-select: none;
+      overflow-x: hidden;
+    }
+
+    /* ============================================================
+       스크린 시스템 (화면 전환)
+       ============================================================ */
+    .screen { display: none; flex-direction: column; min-height: 100vh; }
+    .screen.active { display: flex; }
+
+    /* ============================================================
+       공통 컴포넌트
+       ============================================================ */
+    /* 버튼 */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 13px 20px; border-radius: var(--radius); border: none;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+      transition: var(--tr); -webkit-appearance: none;
+    }
+    .btn:active { transform: scale(0.96); opacity: 0.9; }
+    .btn-primary  { background: var(--blue);       color: #fff; }
+    .btn-secondary{ background: var(--gray-light);  color: var(--text); }
+    .btn-success  { background: var(--green);       color: #fff; }
+    .btn-danger   { background: var(--red);         color: #fff; }
+    .btn-amber    { background: var(--amber-light); color: var(--amber); }
+    .btn-dark     { background: var(--gray-dark);   color: #fff; }
+    .btn-full { width: 100%; }
+    .btn-lg   { padding: 17px 24px; font-size: 17px; border-radius: 14px; }
+
+    /* 입력 필드 */
+    .input-field {
+      width: 100%; padding: 12px 14px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      font-size: 16px; color: var(--text); background: var(--white);
+      transition: var(--tr); -webkit-appearance: none;
+      font-family: inherit;
+    }
+    .input-field:focus {
+      outline: none; border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+    }
+    .label {
+      font-size: 12px; font-weight: 700; color: var(--text-muted);
+      margin-bottom: 6px; letter-spacing: 0.4px; text-transform: uppercase;
+    }
+    .form-group { margin-bottom: 18px; }
+
+    /* 상단 바 */
+    .top-bar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px; background: var(--white);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+      position: sticky; top: 0; z-index: 20; flex-shrink: 0;
+    }
+    .top-bar-info { flex: 1; }
+    .top-bar-title   { font-size: 17px; font-weight: 800; }
+    .top-bar-subtitle{ font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+    .back-btn {
+      width: 36px; height: 36px; border-radius: 50%; border: none;
+      background: var(--gray-light); display: flex; align-items: center;
+      justify-content: center; cursor: pointer; font-size: 20px;
+      color: var(--text); transition: var(--tr); flex-shrink: 0;
+    }
+    .back-btn:active { background: var(--border); }
+
+    /* 카드 */
+    .card {
+      background: var(--white); border-radius: var(--radius);
+      box-shadow: var(--shadow); padding: 16px;
+    }
+
+    /* 토스트 */
+    #toast {
+      position: fixed; bottom: 90px; left: 50%;
+      transform: translateX(-50%) translateY(16px);
+      background: rgba(17,24,39,0.92); color: #fff;
+      padding: 11px 22px; border-radius: 22px; font-size: 14px; font-weight: 600;
+      opacity: 0; transition: all 0.28s cubic-bezier(.4,0,.2,1);
+      z-index: 9999; white-space: nowrap; pointer-events: none;
+      backdrop-filter: blur(8px); max-width: 90vw;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* 바텀 시트 모달 */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45); z-index: 500;
+      align-items: flex-end; justify-content: center;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-sheet {
+      background: var(--white); border-radius: 22px 22px 0 0;
+      width: 100%; max-width: 480px; max-height: 78vh; overflow-y: auto;
+      padding: 8px 16px 32px; animation: slideUp 0.28s cubic-bezier(.4,0,.2,1);
+      -webkit-overflow-scrolling: touch;
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-handle {
+      width: 40px; height: 4px; background: var(--border);
+      border-radius: 2px; margin: 8px auto 14px;
+    }
+
+    /* ============================================================
+       1. 랜딩 스크린
+       ============================================================ */
+    #screen-landing {
+      align-items: center; justify-content: center;
+      padding: 40px 28px; background: var(--bg);
+    }
+    .landing-emoji { font-size: 56px; margin-bottom: 12px; }
+    .landing-title {
+      font-size: 26px; font-weight: 900; color: var(--text);
+      text-align: center; margin-bottom: 6px;
+    }
+    .landing-sub {
+      font-size: 14px; color: var(--text-muted);
+      text-align: center; line-height: 1.6; margin-bottom: 40px;
+    }
+    .landing-btns { display: flex; flex-direction: column; gap: 12px; width: 100%; }
+
+    /* ============================================================
+       2. 방 만들기 / 입장 스크린 (공통 폼 레이아웃)
+       ============================================================ */
+    .form-body {
+      flex: 1; overflow-y: auto; padding: 20px 16px 20px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .form-footer {
+      padding: 12px 16px; background: var(--white);
+      box-shadow: 0 -2px 8px rgba(0,0,0,0.07);
+      padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* ============================================================
+       3. 멤버 선택 스크린
+       ============================================================ */
+    .member-legend {
+      padding: 8px 16px; background: var(--blue-light);
+      font-size: 12px; color: var(--blue); text-align: center; line-height: 1.5;
+    }
+    .member-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 10px; padding: 16px;
+    }
+    .member-btn {
+      padding: 18px 8px; background: var(--white);
+      border: 2px solid var(--border); border-radius: var(--radius);
+      font-size: 15px; font-weight: 700; cursor: pointer; text-align: center;
+      transition: var(--tr); box-shadow: var(--shadow); color: var(--text);
+    }
+    .member-btn:active   { transform: scale(0.94); }
+    .member-btn.done     { border-color: var(--green); background: var(--green-light); color: var(--green-dark); }
+    .member-btn.temp     { border-color: var(--amber); background: var(--amber-light); color: var(--amber); }
+
+    /* ============================================================
+       4. 메인 스크린 (고정 레이아웃)
+       ============================================================ */
+    #screen-main { height: 100dvh; height: 100vh; overflow: hidden; }
+
+    /* 상단 바 (≈10%) */
+    .main-header {
+      height: 10vh; min-height: 58px; max-height: 76px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 16px; background: var(--white);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.07); flex-shrink: 0;
+    }
+    .main-greeting      { font-size: 15px; font-weight: 700; }
+    .main-greeting span { color: var(--blue); }
+    .main-room-sub      { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+    .main-input-btn     { padding: 10px 16px; font-size: 14px; }
+
+    /* 달력 영역 (≈55%) */
+    .main-calendar-wrap {
+      height: 55vh; min-height: 290px;
+      display: flex; flex-direction: column;
+      background: var(--white); flex-shrink: 0; overflow: hidden;
+    }
+    .cal-nav {
+      display: flex; align-items: center; justify-content: center;
+      gap: 18px; padding: 8px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .cal-nav-btn {
+      width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid var(--border);
+      background: var(--white); font-size: 18px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; color: var(--text);
+      transition: var(--tr);
+    }
+    .cal-nav-btn:active { background: var(--gray-light); }
+    .cal-month-title { font-size: 18px; font-weight: 800; min-width: 56px; text-align: center; }
+
+    .cal-day-labels {
+      display: grid; grid-template-columns: repeat(7, 1fr);
+      padding: 0 2px; flex-shrink: 0; border-bottom: 1px solid var(--border);
+    }
+    .cal-day-label {
+      text-align: center; font-size: 10px; font-weight: 700;
+      color: var(--text-muted); padding: 4px 0;
+    }
+    .cal-day-label:nth-child(6) { color: var(--blue); }
+    .cal-day-label:nth-child(7) { color: var(--red);  }
+
+    .cal-grid {
+      display: grid; grid-template-columns: repeat(7, 1fr);
+      grid-auto-rows: minmax(0, 1fr);
+      flex: 1; padding: 2px; gap: 1px; overflow: hidden;
+    }
+    .cal-cell {
+      display: flex; flex-direction: column;
+      border: 0.5px solid var(--border); border-radius: 5px;
+      cursor: pointer; overflow: hidden; transition: background 0.12s;
+      padding: 2px 3px;
+    }
+    .cal-cell:active  { background: var(--blue-light); }
+    .cal-cell.empty   { border-color: transparent; background: transparent; cursor: default; pointer-events: none; }
+    .cal-cell.today   { border-color: var(--blue); background: var(--blue-light); }
+    .cal-cell.past    { opacity: 0.35; }
+    .cal-cell.sat .cal-date-num { color: var(--blue); }
+    .cal-cell.sun .cal-date-num { color: var(--red);  }
+    .cal-date-num { font-size: 10px; font-weight: 700; line-height: 1.1; }
+    .cal-names-area { flex: 1; overflow: hidden; }
+    .cal-names-text { font-size: 7.5px; color: var(--green-dark); font-weight: 600; line-height: 1.35; }
+    .cal-names-more { font-size: 7px; color: var(--text-muted); }
+
+    /* 하단 요약 (≈35%) */
+    .main-bottom {
+      flex: 1; display: flex; flex-direction: column;
+      background: var(--bg); overflow: hidden; min-height: 0;
+    }
+    .bottom-gap-top    { flex: 0 0 5px; }
+    .bottom-gap-bottom { flex: 0 0 0px; }
+
+    /* 슬라이딩 텍스트 1 */
+    .summary-slide-wrap {
+      flex: 0 0 38px;
+      display: flex; align-items: center;
+      background: var(--white); border-radius: 10px; margin: 0 12px;
+      box-shadow: var(--shadow); overflow: hidden;
+    }
+    .marquee-outer { overflow: hidden; flex: 1; }
+    .marquee-inner {
+      display: inline-block; white-space: nowrap;
+      font-size: 12.5px; color: var(--text); padding: 0 10px;
+      animation: marquee 18s linear infinite;
+    }
+    @keyframes marquee {
+      0%   { transform: translateX(100vw); }
+      100% { transform: translateX(-100%); }
+    }
+    .marquee-icon { padding: 0 8px; font-size: 16px; flex-shrink: 0; }
+
+    /* 랭크 텍스트 2 */
+    .summary-rank-wrap {
+      flex: 0 0 38px;
+      display: flex; align-items: center; padding: 0 14px;
+      background: var(--white); border-radius: 10px; margin: 0 12px;
+      box-shadow: var(--shadow);
+    }
+    .rank-text { font-size: 13px; font-weight: 700; color: var(--blue); line-height: 1.4; }
+
+    /* 공통 가능 날짜 TOP 4 카드 */
+    .top-dates-wrap { padding: 0 12px 5px; flex-shrink: 0; }
+    .top-dates-card {
+      background: var(--white); border-radius: 10px;
+      padding: 7px 12px; box-shadow: var(--shadow);
+    }
+    .top-dates-title { font-size: 11.5px; font-weight: 800; color: var(--blue); margin-bottom: 3px; }
+    .top-dates-row {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 11.5px; color: var(--text); padding: 1px 0;
+    }
+    .top-dates-row span:last-child { font-size: 11px; color: var(--text-muted); font-weight: 700; }
+
+    /* 특수사항 요약 박스 (입력 화면) */
+    .exc-summary-box {
+      background: var(--white); border-radius: 10px;
+      border: 1.5px solid var(--border); padding: 12px 14px; margin-top: 12px;
+    }
+    .exc-summary-title { font-size: 13px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+    .exc-summary-item { padding: 6px 0; border-bottom: 0.5px solid var(--border); }
+    .exc-summary-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .exc-summary-date { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+    .exc-summary-line { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+    /* 하단 버튼 */
+    .main-action-row {
+      flex: 0 0 48px;
+      display: flex; gap: 8px; padding: 4px 12px;
+    }
+    .main-act-btn {
+      flex: 1; border: none; border-radius: 12px; font-size: 14px;
+      font-weight: 800; cursor: pointer; transition: var(--tr);
+    }
+    .main-act-btn:active { transform: scale(0.96); }
+    .btn-view  { background: var(--blue);     color: #fff; }
+    .btn-stats { background: #7C3AED;         color: #fff; }
+    .btn-edit  { background: var(--gray-dark); color: #fff; }
+
+    /* ============================================================
+       5. 입력 스크린 (요일 탭)
+       ============================================================ */
+    #screen-input { background: var(--bg); }
+    .input-screen-body {
+      flex: 1; overflow-y: auto; padding: 12px 16px 100px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* 월 탭 */
+    .month-tabs { display: flex; gap: 0; margin-bottom: 0; }
+    .month-tab {
+      flex: 1; padding: 11px; text-align: center; font-size: 15px; font-weight: 800;
+      border: none; background: var(--gray-light); color: var(--text-muted);
+      cursor: pointer; border-radius: 10px 10px 0 0; transition: var(--tr);
+    }
+    .month-tab.active { background: var(--white); color: var(--blue); box-shadow: 0 -2px 8px rgba(0,0,0,0.06); }
+
+    /* 요일 그리드 */
+    .weekday-grid {
+      display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px;
+      padding: 14px; background: var(--white);
+      border-radius: 0 0 var(--radius) var(--radius); box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+    .wd-cell {
+      aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+      border-radius: 10px; font-size: 15px; font-weight: 800; cursor: pointer;
+      transition: var(--tr); border: 2px solid transparent;
+      background: var(--red-light); color: var(--red);
+    }
+    .wd-cell.done { background: var(--green-light); color: var(--green-dark); border-color: var(--green); }
+    .wd-cell:active { transform: scale(0.88); }
+
+    /* 진행 현황 */
+    .progress-wrap { padding: 4px 2px 12px; }
+    .progress-label { font-size: 13px; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; }
+    .progress-bar  { height: 5px; background: var(--border); border-radius: 3px; }
+    .progress-fill { height: 100%; background: var(--blue); border-radius: 3px; transition: width 0.35s ease; }
+
+    /* 하단 고정 버튼 바 (입력 화면) */
+    .input-bottom-bar {
+      position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 100%; max-width: 480px; display: flex; gap: 8px;
+      padding: 10px 16px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+      background: var(--white); box-shadow: 0 -2px 8px rgba(0,0,0,0.09); z-index: 50;
+    }
+    .input-bottom-bar .btn { flex: 1; padding: 12px 8px; font-size: 14px; }
+
+    /* ============================================================
+       6. 시간 입력 스크린
+       ============================================================ */
+    #screen-time { height: 100dvh; height: 100vh; overflow: hidden; background: var(--white); }
+    .time-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 14px; background: var(--white);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+      position: sticky; top: 0; z-index: 10; flex-shrink: 0;
+    }
+    .time-header-title { font-size: 16px; font-weight: 800; flex: 1; }
+    .time-fill-count   { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+
+    /* 시간 입력 본체 */
+    .time-body {
+      display: flex; flex: 1; overflow: hidden; min-height: 0;
+    }
+    /* 왼쪽: 스크롤 가능한 시간 슬롯 열 */
+    .time-slots-col {
+      flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    }
+    .time-row {
+      display: flex; align-items: center; height: 46px;
+      padding: 0 10px; border-bottom: 0.5px solid var(--border); cursor: pointer;
+      transition: background 0.1s;
+    }
+    .time-row:active { background: rgba(0,0,0,0.03); }
+    .time-row-label {
+      font-size: 12.5px; font-weight: 600; color: var(--text-muted);
+      width: 50px; flex-shrink: 0; font-variant-numeric: tabular-nums;
+    }
+    .time-row-bar {
+      flex: 1; height: 26px; border-radius: 6px;
+      background: var(--gray-light); transition: background 0.12s;
+    }
+    .time-row-bar.available   { background: var(--green); }
+    .time-row-bar.unavailable { background: var(--red);   }
+    .time-row-bar.tentative   { background: var(--amber); }
+
+    /* 오른쪽: 상태 버튼 3개 */
+    .status-col {
+      width: 72px; display: flex; flex-direction: column; justify-content: center;
+      gap: 8px; padding: 10px 8px 10px 0; background: var(--white);
+      border-left: 1px solid var(--border); flex-shrink: 0;
+    }
+    .stat-btn {
+      padding: 10px 0; border-radius: 10px; border: 2.5px solid transparent;
+      font-size: 11px; font-weight: 800; cursor: pointer; text-align: center;
+      transition: var(--tr); line-height: 1.4;
+    }
+    .stat-btn:active { transform: scale(0.93); }
+    .stat-btn.s-available   { background: var(--green-light); color: var(--green-dark); }
+    .stat-btn.s-unavailable { background: var(--red-light);   color: var(--red);        }
+    .stat-btn.s-tentative   { background: var(--amber-light); color: var(--amber);      }
+    .stat-btn.active { border-color: currentColor; box-shadow: 0 2px 8px rgba(0,0,0,0.15); transform: scale(1.06); }
+
+    /* 저장 바 (시간 입력 하단) */
+    .time-save-bar {
+      padding: 10px 14px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+      background: var(--white); box-shadow: 0 -2px 8px rgba(0,0,0,0.08); flex-shrink: 0;
+    }
+
+    /* 전체 가능/불가 빠른 채우기 바 */
+    .time-quick-bar {
+      display: flex; gap: 8px; padding: 6px 14px; flex-shrink: 0;
+      background: var(--white); border-top: 1px solid var(--border);
+    }
+    .time-quick-bar .btn { flex: 1; padding: 8px 6px; font-size: 13px; font-weight: 700; border-radius: 10px; }
+
+    /* ============================================================
+       7. 특수사항 (예외 날짜) 스크린
+       ============================================================ */
+    #screen-exception { background: var(--bg); }
+    .exc-body { flex: 1; overflow-y: auto; padding: 12px 16px 20px; -webkit-overflow-scrolling: touch; }
+
+    .exc-month-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+    .exc-month-tab {
+      flex: 1; padding: 10px; text-align: center; font-size: 15px; font-weight: 700;
+      border: 2px solid var(--border); background: var(--white); color: var(--text-muted);
+      border-radius: 10px; cursor: pointer; transition: var(--tr);
+    }
+    .exc-month-tab.active { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
+
+    .exc-grid {
+      display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px;
+      background: var(--white); border-radius: var(--radius); padding: 12px;
+      box-shadow: var(--shadow); margin-bottom: 16px;
+    }
+    .exc-label {
+      text-align: center; font-size: 10px; font-weight: 700;
+      color: var(--text-muted); padding: 3px 0;
+    }
+    .exc-label:nth-child(6) { color: var(--blue); }
+    .exc-label:nth-child(7) { color: var(--red);  }
+    .exc-cell {
+      aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+      border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
+      border: 1.5px solid var(--border); background: var(--white);
+      transition: var(--tr); position: relative;
+    }
+    .exc-cell.empty { border-color: transparent; background: transparent; pointer-events: none; }
+    .exc-cell:active { transform: scale(0.9); }
+    .exc-cell.sat { color: var(--blue); }
+    .exc-cell.sun { color: var(--red);  }
+    .exc-cell.has-exc {
+      border-color: var(--amber); background: var(--amber-light); color: var(--amber);
+    }
+    .exc-cell.has-exc::after {
+      content: ''; position: absolute; bottom: 3px; right: 3px;
+      width: 5px; height: 5px; border-radius: 50%; background: var(--amber);
+    }
+
+    /* 예외 목록 */
+    .exc-list-title { font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; }
+    .exc-item {
+      background: var(--white); border-radius: 10px; padding: 11px 14px;
+      margin-bottom: 8px; box-shadow: var(--shadow);
+      display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    }
+    .exc-item-date   { font-size: 14px; font-weight: 700; }
+    .exc-item-times  { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .exc-del-btn {
+      background: var(--red-light); color: var(--red); border: none; border-radius: 8px;
+      padding: 7px 12px; font-size: 12px; font-weight: 700; cursor: pointer; flex-shrink: 0;
+    }
+
+    /* ============================================================
+       8. 조회 스크린
+       ============================================================ */
+    #screen-view { background: var(--bg); }
+    .view-chip-wrap {
+      padding: 12px 16px; background: var(--white); border-bottom: 1px solid var(--border);
+    }
+    .view-chips {
+      display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;
+      -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    }
+    .view-chips::-webkit-scrollbar { display: none; }
+    .view-chip {
+      padding: 7px 16px; border-radius: 20px; background: var(--gray-light);
+      border: 1.5px solid var(--border); font-size: 13px; font-weight: 700;
+      white-space: nowrap; cursor: pointer; transition: var(--tr);
+    }
+    .view-chip.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+
+    .view-body {
+      flex: 1; overflow-y: auto; padding: 14px; -webkit-overflow-scrolling: touch;
+    }
+    .view-section {
+      background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow);
+      margin-bottom: 10px; overflow: hidden;
+    }
+    .view-section-head { padding: 10px 14px; background: var(--blue-light); font-size: 13px; font-weight: 700; color: var(--blue); }
+    .view-section-body { padding: 10px 14px; }
+    .view-time-line { font-size: 13px; color: var(--text); padding: 2px 0; }
+
+    /* ============================================================
+       날짜 상세 모달 내부
+       ============================================================ */
+    .modal-date-title { font-size: 17px; font-weight: 800; margin-bottom: 14px; }
+    .modal-member-item { padding: 10px 0; border-bottom: 0.5px solid var(--border); }
+    .modal-member-item:last-child { border-bottom: none; }
+    .modal-member-name { font-size: 13px; font-weight: 800; color: var(--blue); margin-bottom: 3px; }
+    .modal-member-times { font-size: 12.5px; color: var(--text-muted); line-height: 1.6; }
+
+    /* ============================================================
+       로딩 스피너
+       ============================================================ */
+    .loading-wrap { display: flex; align-items: center; justify-content: center; height: 100px; }
+    .spinner {
+      width: 30px; height: 30px; border: 3px solid var(--border);
+      border-top-color: var(--blue); border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ============================================================
+       안내 박스
+       ============================================================ */
+    .info-box {
+      background: var(--blue-light); border-radius: 10px; padding: 14px;
+      font-size: 13px; color: var(--blue); line-height: 1.7; margin-top: 16px;
+    }
+    .info-box strong { font-weight: 800; }
+
+    /* ============================================================
+       반응형: 더 큰 화면에서 중앙 정렬 보정
+       ============================================================ */
+    @media (min-height: 812px) {
+      .main-header { max-height: 82px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ============================================================
+     스크린 1: 랜딩 화면
+     ============================================================ -->
+<div id="screen-landing" class="screen active">
+  <div class="landing-emoji">📅</div>
+  <h1 class="landing-title">우리는 언제 만나요</h1>
+  <p class="landing-sub">일정을 공유하고<br>최적의 만남 시간을 찾아보세요</p>
+  <div class="landing-btns">
+    <button class="btn btn-primary btn-lg btn-full" onclick="goToJoin()">방 코드로 입장하기</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     스크린 2: 방 만들기
+     ============================================================ -->
+<div id="screen-create" class="screen">
+  <div class="top-bar">
+    <button class="back-btn" onclick="showScreen('screen-landing')">‹</button>
+    <div class="top-bar-info">
+      <div class="top-bar-title">방 만들기</div>
+    </div>
+    <div style="width:36px"></div>
+  </div>
+  <div class="form-body">
+    <div class="form-group">
+      <div class="label">방 이름</div>
+      <input type="text" class="input-field" id="cr-name" value="스킷드라마 공연팀" placeholder="방 이름 입력">
+    </div>
+    <div class="form-group">
+      <div class="label">방 코드 (비워두면 6자리 자동 생성)</div>
+      <div style="display:flex;gap:8px">
+        <input type="text" class="input-field" id="cr-code" value="0001"
+               placeholder="방 코드 (예: 0001)"
+               style="flex:1;text-align:center;font-size:20px;font-weight:800;letter-spacing:3px"
+               oninput="this.value=this.value.toUpperCase()">
+        <button class="btn btn-secondary" onclick="autoGenCode()" style="padding:12px 14px;white-space:nowrap;font-size:13px">자동생성</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="label">인원 수</div>
+      <input type="number" class="input-field" id="cr-count" value="11" min="1" max="100">
+    </div>
+    <div class="form-group">
+      <div class="label">사용자 목록 (한 줄에 한 명)</div>
+      <textarea class="input-field" id="cr-members" rows="12"
+                style="resize:none;font-size:15px;line-height:2">이우주
+함유빈
+김승민
+노시온
+최정현
+이예슬
+유희원
+김지원
+김범서
+한예진
+김완재</textarea>
+    </div>
+  </div>
+  <div class="form-footer">
+    <button class="btn btn-primary btn-full btn-lg" onclick="createRoom()">방 만들기</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     스크린 3: 방 입장
+     ============================================================ -->
+<div id="screen-join" class="screen">
+  <div class="top-bar">
+    <button class="back-btn" onclick="showScreen('screen-landing')">‹</button>
+    <div class="top-bar-info">
+      <div class="top-bar-title">방 입장</div>
+      <div class="top-bar-subtitle">방장에게 방 코드를 받아서 입력하세요</div>
+    </div>
+    <div style="width:36px"></div>
+  </div>
+  <div class="form-body" style="display:flex;flex-direction:column;justify-content:center">
+    <div style="text-align:center;font-size:52px;margin-bottom:24px">🚪</div>
+    <div class="form-group">
+      <div class="label">방 코드</div>
+      <input type="text" class="input-field" id="join-code" value="0001"
+             placeholder="방 코드 입력"
+             style="text-align:center;font-size:28px;font-weight:900;letter-spacing:6px"
+             oninput="this.value=this.value.toUpperCase();document.getElementById('join-err').style.display='none'">
+    </div>
+    <div id="join-err" style="display:none;color:var(--red);font-size:13px;text-align:center;margin-top:6px;font-weight:700"></div>
+  </div>
+  <div class="form-footer">
+    <button class="btn btn-primary btn-full btn-lg" onclick="joinRoom()">입장하기</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     스크린 4: 멤버 선택
+     ============================================================ -->
+<div id="screen-select" class="screen">
+  <div class="top-bar">
+    <button class="back-btn" onclick="showScreen('screen-landing')">‹</button>
+    <div class="top-bar-info">
+      <div class="top-bar-title" id="sel-room-name">방 이름</div>
+      <div class="top-bar-subtitle">본인 이름을 선택하세요</div>
+    </div>
+    <div style="width:36px"></div>
+  </div>
+  <div class="member-legend">
+    ✅ 초록 = 입력 완료 &nbsp;|&nbsp; 🟡 노랑 = 임시저장 &nbsp;|&nbsp; 기본 = 미입력
+  </div>
+  <div id="member-grid" class="member-grid"></div>
+</div>
+
+<!-- ============================================================
+     스크린 5: 메인 (달력 + 요약)
+     ============================================================ -->
+<div id="screen-main" class="screen">
+
+  <!-- 상단 바 (약 10%) -->
+  <div class="main-header">
+    <div style="flex:1;min-width:0">
+      <div class="main-greeting">안녕하세요, <span id="main-name">사용자</span>님!</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-top:1px">
+        <div class="main-room-sub" id="main-room-sub" style="margin-top:0"></div>
+        <button onclick="changeUser()" style="background:var(--gray-light);border:none;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;color:var(--text-muted);cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent">변경</button>
+      </div>
+    </div>
+    <button class="btn btn-primary main-input-btn" onclick="openInputScreen()">입력하기</button>
+  </div>
+
+  <!-- 달력 영역 (약 55%) -->
+  <div class="main-calendar-wrap">
+    <div class="cal-nav">
+      <button class="cal-nav-btn" onclick="changeMonth(-1)">‹</button>
+      <div class="cal-month-title" id="cal-month-title">5월</div>
+      <button class="cal-nav-btn" onclick="changeMonth(1)">›</button>
+    </div>
+    <div class="cal-day-labels">
+      <div class="cal-day-label">월</div><div class="cal-day-label">화</div>
+      <div class="cal-day-label">수</div><div class="cal-day-label">목</div>
+      <div class="cal-day-label">금</div><div class="cal-day-label">토</div>
+      <div class="cal-day-label">일</div>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+  </div>
+
+  <!-- 하단 요약 영역 (약 35%) -->
+  <div class="main-bottom">
+    <div class="bottom-gap-top"></div>
+
+    <!-- 공통 가능 날짜 TOP 4 -->
+    <div class="top-dates-wrap">
+      <div class="top-dates-card">
+        <div class="top-dates-title">🏆 공통 가능 날짜 TOP 4</div>
+        <div id="top-dates-list"><div style="font-size:11px;color:var(--text-muted)">데이터 로딩 중...</div></div>
+      </div>
+    </div>
+
+    <!-- 내 일정 겹침 안내 -->
+    <div class="summary-rank-wrap">
+      <div class="rank-text" id="summary-rank">🏆 공통 시간대를 계산 중입니다...</div>
+    </div>
+
+    <!-- 조회 / 통계 / 수정 버튼 -->
+    <div class="main-action-row">
+      <button class="main-act-btn btn-view"  onclick="openViewScreen()">🔍 조회</button>
+      <button class="main-act-btn btn-stats" onclick="openStatsModal()">📊 통계</button>
+      <button class="main-act-btn btn-edit"  onclick="openInputScreen()">✏️ 수정</button>
+    </div>
+
+    <div class="bottom-gap-bottom"></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     스크린 6: 입력 (요일 탭 선택)
+     ============================================================ -->
+<div id="screen-input" class="screen">
+  <div class="top-bar">
+    <button class="back-btn" onclick="showScreen('screen-main')">‹</button>
+    <div class="top-bar-info">
+      <div class="top-bar-title">가능 시간 입력</div>
+      <div class="top-bar-subtitle" id="input-member-label"></div>
+    </div>
+    <div style="width:36px"></div>
+  </div>
+
+  <div class="input-screen-body">
+    <!-- 월 탭 -->
+    <div class="month-tabs">
+      <button class="month-tab active" id="itab-5" onclick="switchInputMonth(5)">5월</button>
+      <button class="month-tab"        id="itab-6" onclick="switchInputMonth(6)">6월</button>
+    </div>
+
+    <!-- 요일 셀 그리드 -->
+    <div class="weekday-grid" id="wd-grid"></div>
+
+    <!-- 진행 현황 -->
+    <div class="progress-wrap">
+      <div class="progress-label" id="prog-label">0 / 14 요일 완료</div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="prog-fill" style="width:0%"></div>
+      </div>
+    </div>
+
+    <!-- 안내 -->
+    <div class="info-box">
+      <strong>📌 입력 방법</strong><br>
+      1. 요일 칸을 눌러 시간 입력 화면으로 이동<br>
+      2. 오른쪽 상태 버튼(가능/불가/미확정) 선택<br>
+      3. 왼쪽 시간 칸을 눌러 색칠<br>
+      4. 모든 칸을 채우면 저장 버튼 활성화<br><br>
+      <strong style="color:var(--red)">연한 빨강</strong> = 미입력 &nbsp;|&nbsp;
+      <strong style="color:var(--green-dark)">초록</strong> = 완료
+    </div>
+
+    <!-- 특수사항 요약 -->
+    <div id="exc-summary-wrap"></div>
+  </div>
+
+  <!-- 하단 고정 버튼 -->
+  <div class="input-bottom-bar">
+    <button class="btn btn-secondary" onclick="saveTemp()">💾 임시저장</button>
+    <button class="btn btn-amber"     onclick="openExceptionScreen()">📋 특수사항</button>
+    <button class="btn btn-primary"   onclick="saveAvailability()">✓ 저장</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     스크린 7: 시간 입력 (시간 그리드)
+     ============================================================ -->
+<div id="screen-time" class="screen">
+  <div class="time-header">
+    <button class="back-btn" onclick="backFromTime()">‹</button>
+    <div class="time-header-title" id="time-header-title">월요일 5월</div>
+    <div class="time-fill-count" id="time-fill-count">0/33</div>
+  </div>
+
+  <div class="time-body">
+    <!-- 왼쪽: 시간 슬롯 목록 (스크롤 가능) -->
+    <div class="time-slots-col" id="time-slots-col">
+      <!-- JS로 생성 -->
+    </div>
+    <!-- 오른쪽: 상태 선택 버튼 -->
+    <div class="status-col">
+      <button class="stat-btn s-available active" id="sBtn-available" onclick="selectStatus('available')">
+        가능<br>✓
+      </button>
+      <button class="stat-btn s-unavailable" id="sBtn-unavailable" onclick="selectStatus('unavailable')">
+        불가<br>✗
+      </button>
+      <button class="stat-btn s-tentative" id="sBtn-tentative" onclick="selectStatus('tentative')">
+        미확<br>?
+      </button>
+    </div>
+  </div>
+
+  <!-- 전체 가능 / 전체 불가 버튼 -->
+  <div class="time-quick-bar">
+    <button class="btn btn-success" onclick="fillAll('available')">✅ 전체 가능</button>
+    <button class="btn btn-danger"  onclick="fillAll('unavailable')">✗ 전체 불가</button>
+  </div>
+
+  <div class="time-save-bar">
+    <button class="btn btn-success btn-full" id="time-save-btn" onclick="saveTimeInput()" disabled
+            style="opacity:0.45">
+      모든 칸을 채우면 저장 가능
+    </button>
+  </div>
+</div>
+
+<!-- ============================================================
+     스크린 8: 특수사항 (예외 날짜)
+     ============================================================ -->
+<div id="screen-exception" class="screen">
+  <div class="top-bar">
+    <button class="back-btn" onclick="backToInputFromException()">‹</button>
+    <div class="top-bar-info">
+      <div class="top-bar-title">특수사항 (예외 날짜)</div>
+      <div class="top-bar-subtitle">기본 요일 패턴과 다른 특정 날짜를 지정하세요</div>
+    </div>
+    <div style="width:36px"></div>
+  </div>
+
+  <div class="exc-body">
+    <div class="exc-month-tabs">
+      <button class="exc-month-tab active" id="etab-5" onclick="switchExcMonth(5)">5월</button>
+      <button class="exc-month-tab"        id="etab-6" onclick="switchExcMonth(6)">6월</button>
+    </div>
+
+    <!-- 예외 달력 -->
+    <div id="exc-grid" class="exc-grid"></div>
+
+    <!-- 설정된 예외 목록 -->
+    <div class="exc-list-title">설정된 예외 날짜</div>
+    <div id="exc-list"></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     스크린 9: 조회
+     ============================================================ -->
+<div id="screen-view" class="screen">
+  <div class="top-bar">
+    <button class="back-btn" onclick="showScreen('screen-main')">‹</button>
+    <div class="top-bar-info">
+      <div class="top-bar-title">일정 조회</div>
+      <div class="top-bar-subtitle">멤버를 선택하면 가능 시간을 확인할 수 있어요</div>
+    </div>
+    <div style="width:36px"></div>
+  </div>
+  <div class="view-chip-wrap">
+    <div class="label" style="margin-bottom:8px">멤버 선택</div>
+    <div class="view-chips" id="view-chips"></div>
+  </div>
+  <div class="view-body" id="view-body">
+    <div style="text-align:center;padding:40px 0;color:var(--text-muted);font-size:14px">
+      위에서 멤버를 선택하세요
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     바텀 시트 모달 (날짜 클릭 상세)
+     ============================================================ -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<!-- 토스트 알림 -->
+<div id="toast"></div>
+
+
+<!-- ============================================================
+     JavaScript (Firebase v9 모듈러 SDK)
+     ============================================================ -->
+<script type="module">
+
+// ================================================================
+//
+//   ██████╗ ██╗██████╗ ███████╗██████╗  █████╗ ███████╗███████╗
+//   ██╔══██╗██║██╔══██╗██╔════╝██╔══██╗██╔══██╗██╔════╝██╔════╝
+//   ██████╔╝██║██████╔╝█████╗  ██████╔╝███████║███████╗█████╗
+//   ██╔══██╗██║██╔══██╗██╔══╝  ██╔══██╗██╔══██║╚════██║██╔══╝
+//   ██║  ██║██║██║  ██║███████╗██████╔╝██║  ██║███████║███████╗
+//   ╚═╝  ╚═╝╚═╝╚═╝  ╚═╝╚══════╝╚═════╝ ╚═╝  ╚═╝╚══════╝╚══════╝
+//
+//  FIREBASE 설정값을 아래 firebaseConfig 객체에 입력하세요.
+//
+//  방법:
+//  1. Firebase Console (console.firebase.google.com) 접속
+//  2. 본인 프로젝트 선택 (또는 새 프로젝트 생성)
+//  3. 프로젝트 설정 → 일반 → 내 앱 → 웹 앱 추가 (</> 아이콘)
+//  4. 아래 각 값을 복사해서 붙여넣기
+//
+//  Firestore 보안 규칙 (개발용, 배포 전 적절히 제한하세요):
+//  rules_version = '2';
+//  service cloud.firestore {
+//    match /databases/{database}/documents {
+//      match /{document=**} { allow read, write: if true; }
+//    }
+//  }
+//
+// ================================================================
+
+import { initializeApp } from
+  'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import {
+  getFirestore, doc, setDoc, getDoc, collection, getDocs, serverTimestamp
+} from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey:            "AIzaSyDBJWiwBtdXQdw3OLSrmwPqZoq_F5HfqvY",
+  authDomain:        "whenwemeet-8a3ba.firebaseapp.com",
+  databaseURL:       "https://whenwemeet-8a3ba-default-rtdb.firebaseio.com",
+  projectId:         "whenwemeet-8a3ba",
+  storageBucket:     "whenwemeet-8a3ba.firebasestorage.app",
+  messagingSenderId: "445760722015",
+  appId:             "1:445760722015:web:df6d9939e79b60d15fb7ea",
+  measurementId:     "G-LLXM71J1VK"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const db    = getFirestore(fbApp);
+
+
+// ================================================================
+//   상수 정의
+// ================================================================
+const YEAR      = 2026;
+const MONTHS    = [5, 6];
+const DAY_KEYS  = ['mon','tue','wed','thu','fri','sat','sun'];
+const DAY_KO    = ['월','화','수','목','금','토','일'];
+const DAY_FULL  = ['월요일','화요일','수요일','목요일','금요일','토요일','일요일'];
+
+// 고정 기본 방
+const DEFAULT_ROOM = {
+  roomName:    '스킷드라마 공연팀',
+  roomCode:    '0001',
+  members:     ['이우주','함유빈','김승민','노시온','최정현','이예슬','유희원','김지원','김범서','한예진','김완재'],
+  memberCount: 11,
+  year:        YEAR,
+  months:      MONTHS
+};
+
+const ROOM_0002 = {
+  roomName:    '몽골선교 워십팀',
+  roomCode:    '0002',
+  members:     ['이예진','김지은','함유빈','권오준','남시은','우성원','이형준'],
+  memberCount: 7,
+  year:        YEAR,
+  months:      MONTHS
+};
+
+// 시간 슬롯: 07:00 ~ 23:00, 30분 단위 → 총 33개
+// 07:00, 07:30, 08:00, ..., 22:30, 23:00
+function buildTimeSlots() {
+  const s = [];
+  for (let h = 7; h <= 23; h++) {
+    s.push(`${pad2(h)}:00`);
+    if (h < 23) s.push(`${pad2(h)}:30`);
+  }
+  return s;
+}
+const TIME_SLOTS = buildTimeSlots(); // 33개
+
+
+// ================================================================
+//   전역 상태
+// ================================================================
+const S = {
+  room:    null,   // Firestore 방 데이터
+  member:  null,   // 현재 사용자 이름
+  month:   5,      // 메인 달력 표시 월
+
+  // 모든 멤버 스케줄 { memberName: { weeklyPattern, exceptions, ... } }
+  allSched: {},
+
+  // 내 스케줄 (로컬 편집용)
+  mySched: {
+    weeklyPattern: {},   // { "2026-05-mon": { "07:00": "available", ... } }
+    exceptions:    {},   // { "2026-05-13": { "07:00": "unavailable", ... } }
+    tempSaved:     false,
+    completed:     false
+  },
+
+  inputMonth:  5,      // 입력 화면 선택 월
+  inputCtx:    null,   // { type:'weekday', dayKey, month } | { type:'exception', dateStr }
+  prevScreen: 'screen-input', // 시간 입력 후 돌아갈 화면
+
+  selStatus: 'available', // 현재 선택된 상태 버튼
+
+  excMonth: 5,          // 특수사항 달력 월
+
+  availMap: null,       // 캐시된 가용성 맵
+};
+
+
+// ================================================================
+//   유틸리티
+// ================================================================
+
+/** 2자리 0 패딩 */
+function pad2(n) { return String(n).padStart(2, '0'); }
+
+/** 날짜 문자열 생성 "2026-05-13" */
+function toDateStr(y, m, d) { return `${y}-${pad2(m)}-${pad2(d)}`; }
+
+/** 월의 일수 */
+function daysInMonth(y, m) { return new Date(y, m, 0).getDate(); }
+
+/** 특정 날짜의 요일 키 (mon/tue/...) - 월=0 기준 */
+function getDayKey(y, m, d) {
+  const jsDay = new Date(y, m - 1, d).getDay(); // 0=Sun
+  return DAY_KEYS[[6,0,1,2,3,4,5][jsDay]];
+}
+
+/** 1일의 시작 오프셋 (월=0 기준 칼럼 위치) */
+function monthStartOffset(y, m) {
+  const jsDay = new Date(y, m - 1, 1).getDay();
+  return [6,0,1,2,3,4,5][jsDay];
+}
+
+/** 성 제외 이름: "노시온" → "시온" */
+function firstName(fullName) {
+  return fullName && fullName.length >= 3 ? fullName.slice(1) : fullName;
+}
+
+/** 한국어 정렬 */
+function sortKo(arr) { return [...arr].sort((a,b) => a.localeCompare(b,'ko')); }
+
+/** 시간 문자열에 30분 더하기: "08:00" → "08:30" */
+function addHalf(t) {
+  const [h, m] = t.split(':').map(Number);
+  const tot = h * 60 + m + 30;
+  return `${pad2(Math.floor(tot/60))}:${pad2(tot%60)}`;
+}
+
+/** 패턴에서 연속 available 슬롯 → 범위 배열: ["08:30 ~ 10:00", ...] */
+function mergeRanges(pattern) {
+  if (!pattern) return [];
+  const ranges = [];
+  let start = null, last = null;
+  TIME_SLOTS.forEach(slot => {
+    if (pattern[slot] === 'available') {
+      if (!start) start = slot;
+      last = slot;
+    } else {
+      if (start) { ranges.push(`${start} ~ ${addHalf(last)}`); start = null; last = null; }
+    }
+  });
+  if (start) ranges.push(`${start} ~ ${addHalf(last)}`);
+  return ranges;
+}
+
+/** 상태별 연속 범위: { available: [...], unavailable: [...], tentative: [...] } */
+function mergeRangesByStatus(pattern) {
+  const result = { available: [], unavailable: [], tentative: [] };
+  if (!pattern) return result;
+  ['available', 'unavailable', 'tentative'].forEach(status => {
+    let start = null, last = null;
+    TIME_SLOTS.forEach(slot => {
+      if (pattern[slot] === status) {
+        if (!start) start = slot;
+        last = slot;
+      } else {
+        if (start) { result[status].push(`${start} ~ ${addHalf(last)}`); start = null; last = null; }
+      }
+    });
+    if (start) result[status].push(`${start} ~ ${addHalf(last)}`);
+  });
+  return result;
+}
+
+/** 날짜 표시 형식: "5월 13일 수요일" */
+function fmtDate(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dayNames = ['일','월','화','수','목','금','토'];
+  const dn = dayNames[new Date(y, m-1, d).getDay()];
+  return `${m}월 ${d}일 ${dn}요일`;
+}
+
+/** 특정 날짜의 패턴 반환 (예외 > 요일패턴 순서) */
+function patternForDate(sched, dateStr) {
+  if (!sched) return null;
+  if (sched.exceptions && sched.exceptions[dateStr])
+    return sched.exceptions[dateStr];
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const mk = `${y}-${pad2(m)}-${getDayKey(y, m, d)}`;
+  return (sched.weeklyPattern && sched.weeklyPattern[mk]) || null;
+}
+
+/** 이 날짜에 available 슬롯이 하나라도 있는 멤버 목록 (한국어 정렬) */
+function availMembersOnDate(dateStr) {
+  return sortKo(
+    Object.keys(S.allSched).filter(name => {
+      const pat = patternForDate(S.allSched[name], dateStr);
+      return pat && Object.values(pat).some(v => v === 'available');
+    })
+  );
+}
+
+/** 요일 완료 여부: 33개 슬롯 모두 채워짐 */
+function isWdComplete(monthDayKey) {
+  const p = S.mySched.weeklyPattern[monthDayKey];
+  return !!p && TIME_SLOTS.every(t => p[t] && p[t] !== '');
+}
+
+/** 완료된 요일 수 (최대 14) */
+function countDone() {
+  let n = 0;
+  MONTHS.forEach(m => DAY_KEYS.forEach(dk => {
+    if (isWdComplete(`${YEAR}-${pad2(m)}-${dk}`)) n++;
+  }));
+  return n;
+}
+
+/** 토스트 메시지 */
+function toast(msg, ms = 2500) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), ms);
+}
+
+/** 스크린 전환 */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+window.showScreen = showScreen;
+
+/** 마퀴 텍스트 리셋 (애니메이션 재시작) */
+function setMarquee(text) {
+  const el = document.getElementById('summary-marquee');
+  el.style.animation = 'none';
+  el.offsetHeight; // reflow
+  el.style.animation = '';
+  el.textContent = text;
+}
+
+
+// ================================================================
+//   기본 방 자동 준비 (ensureDefaultRoom)
+// ================================================================
+async function ensureDefaultRoom() {
+  const roomRef = doc(db, 'rooms', DEFAULT_ROOM.roomCode);
+  const snap    = await getDoc(roomRef);
+  if (!snap.exists()) {
+    await setDoc(roomRef, {
+      ...DEFAULT_ROOM,
+      createdAt: serverTimestamp(),
+      fixedRoom: true
+    });
+    S.room = { ...DEFAULT_ROOM };
+  } else {
+    S.room = snap.data();
+    if (!S.room.members) S.room.members = DEFAULT_ROOM.members;
+  }
+  await loadAllSchedules(DEFAULT_ROOM.roomCode);
+}
+
+async function ensureRoom0002() {
+  const roomRef = doc(db, 'rooms', ROOM_0002.roomCode);
+  const snap    = await getDoc(roomRef);
+  if (!snap.exists()) {
+    await setDoc(roomRef, {
+      ...ROOM_0002,
+      createdAt: serverTimestamp(),
+      fixedRoom: true
+    });
+    S.room = { ...ROOM_0002 };
+  } else {
+    S.room = snap.data();
+    if (!S.room.members) S.room.members = ROOM_0002.members;
+  }
+  await loadAllSchedules(ROOM_0002.roomCode);
+}
+
+// ================================================================
+//   랜딩 내비게이션
+// ================================================================
+window.goToJoin = () => showScreen('screen-join');
+
+// ================================================================
+//   사용자 변경 (changeUser)
+// ================================================================
+function changeUser() {
+  localStorage.removeItem('lastMemberName');
+  S.member = null;
+  if (S.room) {
+    renderMemberGrid();
+    showScreen('screen-select');
+  } else {
+    showScreen('screen-landing');
+  }
+}
+window.changeUser = changeUser;
+
+
+// ================================================================
+//   Firebase: 방 만들기
+// ================================================================
+async function createRoom() {
+  const roomName   = document.getElementById('cr-name').value.trim();
+  const codeInput  = document.getElementById('cr-code').value.trim().toUpperCase();
+  const countInput = parseInt(document.getElementById('cr-count').value) || 0;
+  const membersRaw = document.getElementById('cr-members').value.trim();
+
+  if (!roomName)    { toast('방 이름을 입력하세요'); return; }
+
+  // 코드가 없으면 자동 생성
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let roomCode = codeInput;
+  if (!roomCode) {
+    roomCode = '';
+    for (let i = 0; i < 6; i++) roomCode += chars[Math.floor(Math.random() * chars.length)];
+    document.getElementById('cr-code').value = roomCode;
+  }
+
+  const members = membersRaw.split('\n').map(s => s.trim()).filter(Boolean);
+  if (members.length === 0) { toast('사용자 목록을 입력하세요'); return; }
+
+  const memberCount = countInput || members.length;
+
+  try {
+    const roomData = {
+      roomName, roomCode, members, memberCount,
+      year: YEAR, months: MONTHS,
+      createdAt: serverTimestamp()
+    };
+    await setDoc(doc(db, 'rooms', roomCode), roomData);
+    S.room = roomData;
+    await loadAllSchedules(roomCode);
+    toast(`🎉 방 "${roomName}" 생성 완료! 코드: ${roomCode}`);
+    setTimeout(() => { renderMemberGrid(); showScreen('screen-select'); }, 900);
+  } catch (e) {
+    console.error(e);
+    toast('오류: ' + e.message);
+  }
+}
+window.createRoom = createRoom;
+
+
+// ================================================================
+//   Firebase: 방 입장
+// ================================================================
+async function joinRoom() {
+  const code  = document.getElementById('join-code').value.trim().toUpperCase();
+  if (!code) { toast('방 코드를 입력하세요'); return; }
+  const errEl = document.getElementById('join-err');
+  const btn   = document.querySelector('#screen-join .form-footer .btn-primary');
+  errEl.style.display = 'none';
+  if (btn) { btn.disabled = true; btn.textContent = '불러오는 중...'; }
+
+  try {
+    if (code === DEFAULT_ROOM.roomCode) {
+      // 기본 방 0001: 없으면 자동 생성
+      await ensureDefaultRoom();
+    } else if (code === ROOM_0002.roomCode) {
+      // 기본 방 0002: 없으면 자동 생성
+      await ensureRoom0002();
+    } else {
+      const snap = await getDoc(doc(db, 'rooms', code));
+      if (!snap.exists()) {
+        errEl.textContent = '❌ 존재하지 않는 방 코드입니다';
+        errEl.style.display = 'block';
+        return;
+      }
+      S.room = snap.data();
+      await loadAllSchedules(code);
+    }
+    localStorage.setItem('lastRoomCode', code);
+    renderMemberGrid();
+    showScreen('screen-select');
+  } catch (e) {
+    console.error(e);
+    errEl.textContent = '❌ 연결 오류가 발생했습니다. 다시 시도해주세요.';
+    errEl.style.display = 'block';
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '입장하기'; }
+  }
+}
+window.joinRoom = joinRoom;
+
+
+// ================================================================
+//   Firebase: 모든 멤버 스케줄 로드
+// ================================================================
+async function loadAllSchedules(roomCode) {
+  try {
+    const snap = await getDocs(collection(db, 'rooms', roomCode, 'schedules'));
+    S.allSched = {};
+    snap.forEach(d => { S.allSched[d.id] = d.data(); });
+  } catch (e) { console.error('스케줄 로드 오류:', e); }
+}
+
+/** 방 + 스케줄 새로고침 (loadRoom) */
+async function loadRoom(roomCode) {
+  const snap = await getDoc(doc(db, 'rooms', roomCode));
+  if (snap.exists()) S.room = snap.data();
+  await loadAllSchedules(roomCode);
+}
+
+
+// ================================================================
+//   멤버 선택 화면 렌더링
+// ================================================================
+function renderMemberGrid() {
+  document.getElementById('sel-room-name').textContent = S.room.roomName || '';
+  const grid = document.getElementById('member-grid');
+  grid.innerHTML = '';
+  (S.room.members || []).forEach(name => {
+    const sched = S.allSched[name];
+    let cls = '';
+    let badge = '';
+    if (sched) {
+      if (sched.completed)  { cls = 'done'; badge = ' ✅'; }
+      else if (sched.tempSaved) { cls = 'temp'; badge = ' 🟡'; }
+    }
+    const btn = document.createElement('button');
+    btn.className = `member-btn ${cls}`;
+    btn.textContent = name + badge;
+    btn.onclick = () => selectMember(name);
+    grid.appendChild(btn);
+  });
+}
+
+// ================================================================
+//   멤버 선택
+// ================================================================
+async function selectMember(name) {
+  S.member = name;
+  localStorage.setItem('lastMemberName', name);
+
+  // 기존 데이터 불러오기
+  const existing = S.allSched[name];
+  if (existing) {
+    S.mySched = {
+      weeklyPattern: existing.weeklyPattern || {},
+      exceptions:    existing.exceptions    || {},
+      tempSaved:     existing.tempSaved     || false,
+      completed:     existing.completed     || false
+    };
+  } else {
+    S.mySched = { weeklyPattern: {}, exceptions: {}, tempSaved: false, completed: false };
+  }
+
+  // 메인 화면 초기화
+  document.getElementById('main-name').textContent    = name;
+  document.getElementById('main-room-sub').textContent = S.room.roomName || '';
+
+  S.availMap = null; // 캐시 초기화
+  renderCalendar();
+  renderBottomSummary();
+  showScreen('screen-main');
+}
+window.selectMember = selectMember;
+
+
+// ================================================================
+//   달력 렌더링 (renderCalendar)
+// ================================================================
+function renderCalendar() {
+  const m = S.month;
+  document.getElementById('cal-month-title').textContent = `${m}월`;
+
+  const grid = document.getElementById('cal-grid');
+  grid.innerHTML = '';
+
+  const today     = new Date();
+  const todayStr  = toDateStr(today.getFullYear(), today.getMonth() + 1, today.getDate());
+  const isCurMo   = today.getFullYear() === YEAR && today.getMonth() + 1 === m;
+  const numDays   = daysInMonth(YEAR, m);
+  const offset    = monthStartOffset(YEAR, m);
+
+  // 빈 칸 (월요일 기준 오프셋)
+  for (let i = 0; i < offset; i++) {
+    const empty = document.createElement('div');
+    empty.className = 'cal-cell empty';
+    grid.appendChild(empty);
+  }
+
+  // 날짜 칸
+  for (let d = 1; d <= numDays; d++) {
+    const dateStr  = toDateStr(YEAR, m, d);
+    const dk       = getDayKey(YEAR, m, d);
+    const dkIdx    = DAY_KEYS.indexOf(dk);
+    const avail    = availMembersOnDate(dateStr);
+    const isSat    = dkIdx === 5;
+    const isSun    = dkIdx === 6;
+    const isToday  = isCurMo && today.getDate() === d;
+    const isPast   = dateStr < todayStr;
+
+    const cell = document.createElement('div');
+    cell.className = `cal-cell${isSat?' sat':''}${isSun?' sun':''}${isToday?' today':''}${isPast?' past':''}`;
+
+    // 날짜 번호
+    const dateEl = document.createElement('div');
+    dateEl.className = 'cal-date-num';
+    dateEl.textContent = d;
+    cell.appendChild(dateEl);
+
+    // 이름 표시
+    if (avail.length > 0) {
+      const namesWrap = document.createElement('div');
+      namesWrap.className = 'cal-names-area';
+
+      const MAX = 3;
+      const shown = avail.slice(0, MAX).map(n => firstName(n));
+      const rest  = avail.length - MAX;
+
+      const namesText = document.createElement('div');
+      namesText.className = 'cal-names-text';
+      namesText.textContent = shown.join(', ');
+      namesWrap.appendChild(namesText);
+
+      if (rest > 0) {
+        const moreEl = document.createElement('div');
+        moreEl.className = 'cal-names-more';
+        moreEl.textContent = `외 ${rest}명`;
+        namesWrap.appendChild(moreEl);
+      }
+      cell.appendChild(namesWrap);
+    }
+
+    // 클릭 → 날짜 상세 모달
+    cell.onclick = () => openDateModal(dateStr, avail);
+    grid.appendChild(cell);
+  }
+}
+
+// ================================================================
+//   월 변경 (changeMonth)
+// ================================================================
+function changeMonth(dir) {
+  const idx = MONTHS.indexOf(S.month);
+  const next = idx + dir;
+  if (next < 0 || next >= MONTHS.length) return;
+  S.month = MONTHS[next];
+  renderCalendar();
+}
+window.changeMonth = changeMonth;
+
+
+// ================================================================
+//   날짜 클릭 → 모달 (날짜 상세)
+// ================================================================
+function openDateModal(dateStr, availMembers) {
+  const body = document.getElementById('modal-body');
+  body.innerHTML = `<div class="modal-date-title">📅 ${fmtDate(dateStr)}</div>`;
+
+  if (availMembers.length === 0) {
+    body.innerHTML += `<div style="color:var(--text-muted);font-size:14px;padding:12px 0">가능한 멤버가 없습니다</div>`;
+  } else {
+    availMembers.forEach(name => {
+      const pat    = patternForDate(S.allSched[name], dateStr);
+      const ranges = mergeRanges(pat);
+      const item   = document.createElement('div');
+      item.className = 'modal-member-item';
+      item.innerHTML = `
+        <div class="modal-member-name">${firstName(name)} <span style="font-weight:400;font-size:11px;color:var(--text-muted)">(${name})</span></div>
+        <div class="modal-member-times">${ranges.length ? ranges.join(' / ') : '시간 정보 없음'}</div>
+      `;
+      body.appendChild(item);
+    });
+  }
+  document.getElementById('modal-overlay').classList.add('active');
+}
+
+function closeModal(e) {
+  document.getElementById('modal-overlay').classList.remove('active');
+}
+window.closeModal = closeModal;
+
+
+// ================================================================
+//   하단 요약 렌더링 (renderBottomSummary)
+// ================================================================
+function renderBottomSummary() {
+  if (!S.member) return;
+  if (!S.availMap) S.availMap = calculateAvailabilityMap();
+
+  document.getElementById('summary-rank').textContent = buildRankText();
+  renderTopDates();
+}
+
+/** 가용성 맵: { dateStr: { slot: [memberName, ...] } } */
+function calculateAvailabilityMap() {
+  const map = {};
+  MONTHS.forEach(m => {
+    for (let d = 1; d <= daysInMonth(YEAR, m); d++) {
+      const ds = toDateStr(YEAR, m, d);
+      map[ds] = {};
+      TIME_SLOTS.forEach(slot => {
+        map[ds][slot] = Object.keys(S.allSched).filter(name => {
+          const p = patternForDate(S.allSched[name], ds);
+          return p && p[slot] === 'available';
+        });
+      });
+    }
+  });
+  return map;
+}
+
+/** 전체 공통 시간 슬롯 배열 (calculateCommonTimes) */
+function calculateCommonTimes() {
+  if (!S.availMap) S.availMap = calculateAvailabilityMap();
+  const completed = Object.values(S.allSched).filter(s => s.completed).length;
+  if (completed === 0) return [];
+  const common = [];
+  Object.keys(S.availMap).forEach(ds => {
+    Object.keys(S.availMap[ds]).forEach(slot => {
+      if (S.availMap[ds][slot].length === completed) common.push({ ds, slot });
+    });
+  });
+  return common;
+}
+
+/** 최대 인원 가능 시간 랭킹 (calculateTopRankedTimes) */
+function calculateTopRankedTimes() {
+  if (!S.availMap) S.availMap = calculateAvailabilityMap();
+  const countMap = {};
+  Object.keys(S.availMap).forEach(ds => {
+    Object.keys(S.availMap[ds]).forEach(slot => {
+      const cnt = S.availMap[ds][slot].length;
+      if (cnt > 0) {
+        if (!countMap[cnt]) countMap[cnt] = [];
+        countMap[cnt].push({ ds, slot });
+      }
+    });
+  });
+  const sorted = Object.keys(countMap).map(Number).sort((a,b) => b - a);
+  return sorted.slice(0, 4).map((cnt, i) => ({ rank: i+1, count: cnt, slots: countMap[cnt] }));
+}
+
+/** 사용자 공통 시간 겹침 텍스트 (calculateUserOverlap) */
+function calculateUserOverlap() {
+  const common = calculateCommonTimes();
+  if (common.length === 0) return `${S.member}님의 가능 시간 중 전체와 겹치는 시간대는 없음입니다!`;
+
+  // 내 available 슬롯과 교집합
+  const mine = common.filter(({ ds, slot }) => {
+    const p = patternForDate(S.mySched, ds);
+    return p && p[slot] === 'available';
+  });
+  if (mine.length === 0) return `${S.member}님의 가능 시간 중 전체와 겹치는 시간대는 없음입니다!`;
+
+  // 날짜별 묶기 → 범위 생성
+  const byDate = {};
+  mine.forEach(({ ds, slot }) => {
+    if (!byDate[ds]) byDate[ds] = [];
+    byDate[ds].push(slot);
+  });
+
+  const parts = [];
+  Object.keys(byDate).sort().forEach(ds => {
+    const slots = byDate[ds].sort();
+    const ranges = [];
+    let rs = null, rl = null;
+    slots.forEach(s => {
+      if (!rs) { rs = s; rl = s; }
+      else if (addHalf(rl) === s) rl = s;
+      else { ranges.push(`${rs}~${addHalf(rl)}`); rs = s; rl = s; }
+    });
+    if (rs) ranges.push(`${rs}~${addHalf(rl)}`);
+    const [y, m, d] = ds.split('-').map(Number);
+    const dn = ['일','월','화','수','목','금','토'][new Date(y,m-1,d).getDay()];
+    parts.push(`${m}월 ${d}일(${dn}) ${ranges.join(', ')}`);
+  });
+
+  return `${S.member}님의 가능 시간 중 전체와 겹치는 시간대: ${parts.join(' / ')}`;
+}
+
+function buildMarqueeText() {
+  return calculateUserOverlap();
+}
+
+/** 날짜별 가능 인원 TOP 4 계산 */
+function calculateTopDates() {
+  const today = new Date();
+  const todayStr = toDateStr(today.getFullYear(), today.getMonth() + 1, today.getDate());
+  const dateCountMap = {};
+  MONTHS.forEach(m => {
+    for (let d = 1; d <= daysInMonth(YEAR, m); d++) {
+      const ds = toDateStr(YEAR, m, d);
+      if (ds < todayStr) continue;
+      const count = Object.keys(S.allSched).filter(name => {
+        const pat = patternForDate(S.allSched[name], ds);
+        return pat && Object.values(pat).some(v => v === 'available');
+      }).length;
+      if (count > 0) dateCountMap[ds] = count;
+    }
+  });
+  return Object.entries(dateCountMap)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 4)
+    .map(([ds, count], i) => ({ rank: i + 1, ds, count }));
+}
+
+/** TOP 4 날짜 카드 렌더링 */
+function renderTopDates() {
+  const listEl = document.getElementById('top-dates-list');
+  if (!listEl) return;
+  const totalMembers = Object.keys(S.allSched).length;
+  const top = calculateTopDates();
+  if (top.length === 0) {
+    listEl.innerHTML = '<div style="font-size:11px;color:var(--text-muted)">공통 가능 날짜 정보가 없습니다.</div>';
+    return;
+  }
+  const medals = ['🥇', '🥈', '🥉', '4위'];
+  listEl.innerHTML = top.map(({ rank, ds, count }) => {
+    const [, m, d] = ds.split('-').map(Number);
+    const isAll = totalMembers > 0 && count === totalMembers;
+    return `<div class="top-dates-row">
+      <span>${medals[rank - 1]} ${m}월 ${d}일</span>
+      <span>${count}명 가능${isAll ? ' 🎉' : ''}</span>
+    </div>`;
+  }).join('');
+}
+
+/** 랭크 겹침 텍스트 */
+function buildRankText() {
+  const ranks  = calculateTopRankedTimes();
+  const cplt   = Object.values(S.allSched).filter(s => s.completed).length;
+  if (ranks.length === 0) return `🏆 ${S.member}님의 공통 시간대 정보 없음`;
+
+  const labels = [];
+  ranks.forEach(({ rank, count, slots }) => {
+    const match = slots.some(({ ds, slot }) => {
+      const p = patternForDate(S.mySched, ds);
+      return p && p[slot] === 'available';
+    });
+    if (match) {
+      labels.push(`${rank}위`);
+    }
+  });
+
+  if (labels.length === 0) return `🏆 ${S.member}님은 공통 시간대와 겹치지 않습니다`;
+  return `🏆 ${S.member}님은 ${[...new Set(labels)].join(', ')} 공통 시간대와 겹칩니다!`;
+}
+
+
+// ================================================================
+//   입력 화면 열기 (openInputScreen)
+// ================================================================
+function openInputScreen() {
+  document.getElementById('input-member-label').textContent = S.member || '';
+  S.inputMonth = 5;
+  document.getElementById('itab-5').classList.add('active');
+  document.getElementById('itab-6').classList.remove('active');
+  renderWeekdayTabs();
+  updateProgress();
+  renderExceptionSummary();
+  showScreen('screen-input');
+}
+window.openInputScreen = openInputScreen;
+
+/** 입력 월 전환 */
+function switchInputMonth(m) {
+  S.inputMonth = m;
+  document.getElementById('itab-5').classList.toggle('active', m === 5);
+  document.getElementById('itab-6').classList.toggle('active', m === 6);
+  renderWeekdayTabs();
+}
+window.switchInputMonth = switchInputMonth;
+
+// ================================================================
+//   요일 탭 렌더링 (renderWeekdayTabs)
+// ================================================================
+function renderWeekdayTabs() {
+  const grid = document.getElementById('wd-grid');
+  grid.innerHTML = '';
+  DAY_KEYS.forEach((dk, i) => {
+    const mk   = `${YEAR}-${pad2(S.inputMonth)}-${dk}`;
+    const done = isWdComplete(mk);
+    const cell = document.createElement('div');
+    cell.className = `wd-cell${done ? ' done' : ''}`;
+    cell.textContent = DAY_KO[i];
+    cell.onclick = () => openWeekdayTimeInput(dk, S.inputMonth);
+    grid.appendChild(cell);
+  });
+}
+
+/** 진행 현황 업데이트 */
+function updateProgress() {
+  const done  = countDone();
+  const total = 14;
+  document.getElementById('prog-label').textContent = `${done} / ${total} 요일 완료`;
+  document.getElementById('prog-fill').style.width  = `${(done / total) * 100}%`;
+}
+
+// ================================================================
+//   요일 시간 입력 열기 (openWeekdayTimeInput)
+// ================================================================
+function openWeekdayTimeInput(dk, month) {
+  S.inputCtx  = { type: 'weekday', dayKey: dk, month };
+  S.prevScreen = 'screen-input';
+
+  const idx = DAY_KEYS.indexOf(dk);
+  document.getElementById('time-header-title').textContent =
+    `${DAY_FULL[idx]} (${month}월)`;
+
+  const mk      = `${YEAR}-${pad2(month)}-${dk}`;
+  const existing = S.mySched.weeklyPattern[mk] || {};
+  renderTimeGrid(existing);
+
+  S.selStatus = 'available';
+  updateStatusBtns();
+  showScreen('screen-time');
+}
+
+// ================================================================
+//   시간 그리드 렌더링 (renderTimeGrid)
+// ================================================================
+function renderTimeGrid(existingPattern) {
+  const col = document.getElementById('time-slots-col');
+  col.innerHTML = '';
+
+  TIME_SLOTS.forEach(slot => {
+    const row = document.createElement('div');
+    row.className = 'time-row';
+    row.dataset.slot = slot;
+
+    const lbl = document.createElement('div');
+    lbl.className = 'time-row-label';
+    lbl.textContent = slot;
+
+    const bar = document.createElement('div');
+    const st  = existingPattern[slot] || '';
+    bar.className   = `time-row-bar${st ? ' ' + st : ''}`;
+    bar.dataset.st  = st;
+
+    row.appendChild(lbl);
+    row.appendChild(bar);
+
+    // 탭 → 현재 선택 상태로 색칠 (터치 드래그 지원)
+    row.addEventListener('click', () => {
+      applyStatus(bar);
+      updateFillCount();
+      checkTimeSaveBtn();
+    });
+
+    col.appendChild(row);
+  });
+
+  updateFillCount();
+  checkTimeSaveBtn();
+}
+
+/** 바에 현재 상태 적용 */
+function applyStatus(bar) {
+  bar.className  = `time-row-bar ${S.selStatus}`;
+  bar.dataset.st = S.selStatus;
+}
+
+/** 채워진 슬롯 수 표시 */
+function updateFillCount() {
+  const bars   = document.querySelectorAll('.time-row-bar');
+  const filled = [...bars].filter(b => b.dataset.st && b.dataset.st !== '').length;
+  document.getElementById('time-fill-count').textContent = `${filled}/${TIME_SLOTS.length}`;
+}
+
+/** 저장 버튼 활성화 여부 */
+function checkTimeSaveBtn() {
+  const bars  = document.querySelectorAll('.time-row-bar');
+  const allOk = [...bars].every(b => b.dataset.st && b.dataset.st !== '');
+  const btn   = document.getElementById('time-save-btn');
+  btn.disabled     = !allOk;
+  btn.style.opacity = allOk ? '1' : '0.45';
+  btn.textContent   = allOk ? '✓ 이 요일 저장' : `모든 칸을 채우면 저장 가능`;
+}
+
+// 드래그 페인팅 지원 (touchmove)
+(function setupDrag() {
+  let dragging = false;
+
+  document.addEventListener('touchstart', e => {
+    const row = e.target.closest('.time-row');
+    if (!row) return;
+    dragging = true;
+    applyStatus(row.querySelector('.time-row-bar'));
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    const touch = e.touches[0];
+    const el    = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (!el) return;
+    const row = el.closest('.time-row');
+    if (row) applyStatus(row.querySelector('.time-row-bar'));
+  }, { passive: true });
+
+  document.addEventListener('touchend', () => {
+    if (!dragging) return;
+    dragging = false;
+    updateFillCount();
+    checkTimeSaveBtn();
+  }, { passive: true });
+})();
+
+
+// ================================================================
+//   상태 버튼 선택 (selectStatus)
+// ================================================================
+function selectStatus(st) {
+  S.selStatus = st;
+  updateStatusBtns();
+}
+window.selectStatus = selectStatus;
+
+function updateStatusBtns() {
+  ['available','unavailable','tentative'].forEach(s => {
+    document.getElementById(`sBtn-${s}`)
+      .classList.toggle('active', s === S.selStatus);
+  });
+}
+
+/** 전체 시간 슬롯을 한 번에 채우기 */
+function fillAll(status) {
+  document.querySelectorAll('.time-row-bar').forEach(bar => {
+    bar.className = `time-row-bar ${status}`;
+    bar.dataset.st = status;
+  });
+  updateFillCount();
+  checkTimeSaveBtn();
+}
+window.fillAll = fillAll;
+
+
+// ================================================================
+//   시간 입력 저장 (saveTimeInput)
+// ================================================================
+function saveTimeInput() {
+  // 그리드에서 패턴 수집
+  const bars    = document.querySelectorAll('.time-row-bar');
+  const pattern = {};
+  document.querySelectorAll('.time-row').forEach(row => {
+    const slot = row.dataset.slot;
+    const bar  = row.querySelector('.time-row-bar');
+    pattern[slot] = bar.dataset.st || '';
+  });
+
+  const ctx = S.inputCtx;
+  if (!ctx) return;
+
+  if (ctx.type === 'weekday') {
+    const mk = `${YEAR}-${pad2(ctx.month)}-${ctx.dayKey}`;
+    S.mySched.weeklyPattern[mk] = pattern;
+  } else if (ctx.type === 'exception') {
+    S.mySched.exceptions[ctx.dateStr] = pattern;
+  }
+
+  toast('저장되었습니다');
+
+  // 요일 탭 / 예외 달력 갱신
+  if (S.prevScreen === 'screen-input') {
+    renderWeekdayTabs();
+    updateProgress();
+    renderExceptionSummary();
+  } else if (S.prevScreen === 'screen-exception') {
+    renderExcCalendar();
+    renderExcList();
+    renderExceptionSummary();
+  }
+  showScreen(S.prevScreen);
+}
+window.saveTimeInput = saveTimeInput;
+
+/** 시간 입력 → 뒤로가기 (부분 저장) */
+function backFromTime() {
+  // 채워진 슬롯만 임시 반영
+  const ctx = S.inputCtx;
+  if (ctx) {
+    const pattern = {};
+    document.querySelectorAll('.time-row').forEach(row => {
+      const st = row.querySelector('.time-row-bar').dataset.st;
+      if (st) pattern[row.dataset.slot] = st;
+    });
+    if (ctx.type === 'weekday') {
+      const mk = `${YEAR}-${pad2(ctx.month)}-${ctx.dayKey}`;
+      S.mySched.weeklyPattern[mk] = Object.assign(
+        S.mySched.weeklyPattern[mk] || {}, pattern
+      );
+    }
+  }
+  showScreen(S.prevScreen);
+  if (S.prevScreen === 'screen-input') renderWeekdayTabs();
+}
+window.backFromTime = backFromTime;
+
+
+// ================================================================
+//   임시 저장 (saveTemp) — Firestore
+// ================================================================
+async function saveTemp() {
+  if (!S.member || !S.room) { toast('사용자 또는 방 정보 없음'); return; }
+  try {
+    const data = {
+      memberName:    S.member,
+      weeklyPattern: S.mySched.weeklyPattern,
+      exceptions:    S.mySched.exceptions,
+      tempSaved:     true,
+      completed:     false,
+      updatedAt:     serverTimestamp()
+    };
+    await setDoc(doc(db, 'rooms', S.room.roomCode, 'schedules', S.member), data);
+    S.mySched.tempSaved = true;
+    S.allSched[S.member] = data;
+    renderExceptionSummary();
+    toast('💾 임시 저장되었습니다');
+  } catch (e) { console.error(e); toast('저장 실패: ' + e.message); }
+}
+window.saveTemp = saveTemp;
+
+
+// ================================================================
+//   최종 저장 (saveAvailability) — Firestore
+// ================================================================
+async function saveAvailability() {
+  if (!S.member || !S.room) { toast('사용자 또는 방 정보 없음'); return; }
+
+  const done      = countDone();
+  const isAllDone = done === 14;
+
+  if (!isAllDone) {
+    if (!confirm(`아직 ${14 - done}개 요일이 미완료입니다.\n그래도 저장하시겠습니까?`)) return;
+  }
+
+  try {
+    const data = {
+      memberName:    S.member,
+      weeklyPattern: S.mySched.weeklyPattern,
+      exceptions:    S.mySched.exceptions,
+      tempSaved:     true,
+      completed:     isAllDone,
+      updatedAt:     serverTimestamp()
+    };
+    await setDoc(doc(db, 'rooms', S.room.roomCode, 'schedules', S.member), data);
+    S.mySched.completed = isAllDone;
+    S.allSched[S.member] = data;
+    S.availMap = null;
+    toast(isAllDone ? '✅ 입력 완료! 저장되었습니다' : '저장되었습니다');
+    setTimeout(() => { renderCalendar(); renderBottomSummary(); renderTopDates(); showScreen('screen-main'); }, 600);
+  } catch (e) { console.error(e); toast('저장 실패: ' + e.message); }
+}
+window.saveAvailability = saveAvailability;
+
+
+// ================================================================
+//   특수사항 (예외 날짜) 화면
+// ================================================================
+function openExceptionScreen() {
+  S.excMonth = 5;
+  document.getElementById('etab-5').classList.add('active');
+  document.getElementById('etab-6').classList.remove('active');
+  renderExcCalendar();
+  renderExcList();
+  showScreen('screen-exception');
+}
+window.openExceptionScreen = openExceptionScreen;
+
+function switchExcMonth(m) {
+  S.excMonth = m;
+  document.getElementById('etab-5').classList.toggle('active', m === 5);
+  document.getElementById('etab-6').classList.toggle('active', m === 6);
+  renderExcCalendar();
+}
+window.switchExcMonth = switchExcMonth;
+
+/** 예외 달력 렌더링 */
+function renderExcCalendar() {
+  const m    = S.excMonth;
+  const grid = document.getElementById('exc-grid');
+  grid.innerHTML = '';
+
+  // 요일 헤더
+  DAY_KO.forEach((lbl, i) => {
+    const el = document.createElement('div');
+    el.className = 'exc-label';
+    el.style.color = i === 5 ? 'var(--blue)' : i === 6 ? 'var(--red)' : '';
+    el.textContent = lbl;
+    grid.appendChild(el);
+  });
+
+  const offset = monthStartOffset(YEAR, m);
+  for (let i = 0; i < offset; i++) {
+    const el = document.createElement('div'); el.className = 'exc-cell empty';
+    grid.appendChild(el);
+  }
+
+  for (let d = 1; d <= daysInMonth(YEAR, m); d++) {
+    const ds    = toDateStr(YEAR, m, d);
+    const dk    = getDayKey(YEAR, m, d);
+    const dkIdx = DAY_KEYS.indexOf(dk);
+    const hasE  = !!S.mySched.exceptions[ds];
+
+    const cell = document.createElement('div');
+    cell.className =
+      `exc-cell${dkIdx===5?' sat':''}${dkIdx===6?' sun':''}${hasE?' has-exc':''}`;
+    cell.textContent = d;
+    cell.onclick = () => openExcTimeInput(ds);
+    grid.appendChild(cell);
+  }
+}
+
+/** 예외 날짜 시간 입력 열기 */
+function openExcTimeInput(dateStr) {
+  S.inputCtx  = { type: 'exception', dateStr };
+  S.prevScreen = 'screen-exception';
+  document.getElementById('time-header-title').textContent =
+    fmtDate(dateStr) + ' (예외)';
+  const existing = S.mySched.exceptions[dateStr] || {};
+  renderTimeGrid(existing);
+  S.selStatus = 'available';
+  updateStatusBtns();
+  showScreen('screen-time');
+}
+
+/** 예외 목록 렌더링 */
+function renderExcList() {
+  const list = document.getElementById('exc-list');
+  list.innerHTML = '';
+  const keys = Object.keys(S.mySched.exceptions).sort();
+  if (keys.length === 0) {
+    list.innerHTML = '<div style="color:var(--text-muted);font-size:13px">설정된 예외 날짜가 없습니다</div>';
+    return;
+  }
+  keys.forEach(ds => {
+    const ranges = mergeRanges(S.mySched.exceptions[ds]);
+    const item   = document.createElement('div');
+    item.className = 'exc-item';
+    item.innerHTML = `
+      <div style="flex:1;min-width:0">
+        <div class="exc-item-date">${fmtDate(ds)}</div>
+        <div class="exc-item-times">${ranges.length ? ranges.join(' / ') : '가능 시간 없음'}</div>
+      </div>
+      <button class="exc-del-btn" onclick="deleteException('${ds}')">삭제</button>
+    `;
+    list.appendChild(item);
+  });
+}
+
+/** 예외 삭제 */
+window.deleteException = function(ds) {
+  delete S.mySched.exceptions[ds];
+  renderExcCalendar();
+  renderExcList();
+  renderExceptionSummary();
+  toast('예외 날짜가 삭제되었습니다');
+};
+
+/** saveException (시간 입력의 saveTimeInput이 담당) */
+function saveException(dateStr, pattern) {
+  S.mySched.exceptions[dateStr] = pattern;
+  renderExcCalendar();
+  renderExcList();
+}
+
+/** 특수사항 요약 렌더링 (screen-input 하단) */
+function renderExceptionSummary() {
+  const wrap = document.getElementById('exc-summary-wrap');
+  if (!wrap) return;
+  const exceptions = S.mySched.exceptions || {};
+  const keys = Object.keys(exceptions).sort();
+  const statusLabel = { available: '가능', unavailable: '불가', tentative: '미확정' };
+
+  if (keys.length === 0) {
+    wrap.innerHTML = `<div class="exc-summary-box">
+      <div class="exc-summary-title">📋 내가 기록한 특수사항</div>
+      <div style="color:var(--text-muted);font-size:13px">기록된 특수사항이 없습니다.</div>
+    </div>`;
+    return;
+  }
+
+  let html = `<div class="exc-summary-box"><div class="exc-summary-title">📋 내가 기록한 특수사항</div>`;
+  keys.forEach(ds => {
+    const pattern = exceptions[ds];
+    const values = TIME_SLOTS.map(s => pattern[s]).filter(Boolean);
+    const allSame = values.length === TIME_SLOTS.length && new Set(values).size === 1;
+
+    html += `<div class="exc-summary-item"><div class="exc-summary-date">${fmtDate(ds)}</div>`;
+    if (allSame) {
+      html += `<div class="exc-summary-line">하루 전체 ${statusLabel[values[0]] || values[0]}</div>`;
+    } else {
+      const ranges = mergeRangesByStatus(pattern);
+      if (ranges.available.length)   html += `<div class="exc-summary-line" style="color:var(--green-dark)">가능: ${ranges.available.join(', ')}</div>`;
+      if (ranges.unavailable.length) html += `<div class="exc-summary-line" style="color:var(--red)">불가: ${ranges.unavailable.join(', ')}</div>`;
+      if (ranges.tentative.length)   html += `<div class="exc-summary-line" style="color:var(--amber)">미확정: ${ranges.tentative.join(', ')}</div>`;
+    }
+    html += `</div>`;
+  });
+  html += `</div>`;
+  wrap.innerHTML = html;
+}
+window.renderExceptionSummary = renderExceptionSummary;
+
+/** 특수사항 화면 → 입력 화면 뒤로가기 (요약 갱신 포함) */
+window.backToInputFromException = function() {
+  renderExceptionSummary();
+  showScreen('screen-input');
+};
+
+
+// ================================================================
+//   통계 모달 — 겹치는 인원 기준 시간대 TOP 5
+// ================================================================
+
+/** 날짜별·연속 슬롯별로 동일 멤버 구간을 병합하여 TOP 5 카운트 레벨 반환 */
+function calculateStatRanking() {
+  if (!S.availMap) S.availMap = calculateAvailabilityMap();
+
+  const today = new Date();
+  const todayStr = toDateStr(today.getFullYear(), today.getMonth() + 1, today.getDate());
+  const allRanges = [];
+
+  Object.keys(S.availMap).sort().forEach(ds => {
+    if (ds < todayStr) return;
+    let curStart = null, curEnd = null, curKey = null, curMembers = null;
+
+    TIME_SLOTS.forEach(slot => {
+      const members = S.availMap[ds][slot];
+      if (!members || members.length === 0) {
+        if (curStart !== null) {
+          allRanges.push({ ds, startSlot: curStart, endSlot: curEnd, members: curMembers, count: curMembers.length });
+          curStart = null; curKey = null;
+        }
+        return;
+      }
+      const sorted = sortKo(members);
+      const key    = sorted.join('␟');
+      if (curKey === key) {
+        curEnd = slot;
+      } else {
+        if (curStart !== null) {
+          allRanges.push({ ds, startSlot: curStart, endSlot: curEnd, members: curMembers, count: curMembers.length });
+        }
+        curStart = slot; curEnd = slot; curKey = key; curMembers = sorted;
+      }
+    });
+    if (curStart !== null) {
+      allRanges.push({ ds, startSlot: curStart, endSlot: curEnd, members: curMembers, count: curMembers.length });
+    }
+  });
+
+  if (allRanges.length === 0) return [];
+
+  // 인원 많은 순 → 지속 시간 긴 순 → 날짜 빠른 순 → 시작 시간 빠른 순
+  allRanges.sort((a, b) => {
+    if (b.count !== a.count) return b.count - a.count;
+    const durA = TIME_SLOTS.indexOf(a.endSlot) - TIME_SLOTS.indexOf(a.startSlot);
+    const durB = TIME_SLOTS.indexOf(b.endSlot) - TIME_SLOTS.indexOf(b.startSlot);
+    if (durB !== durA) return durB - durA;
+    if (a.ds !== b.ds) return a.ds.localeCompare(b.ds);
+    return TIME_SLOTS.indexOf(a.startSlot) - TIME_SLOTS.indexOf(b.startSlot);
+  });
+
+  // 상위 5개 시간대 (동일 인원 수도 각각 순위로 표시)
+  return allRanges.slice(0, 5).map((r, i) => ({ rank: i + 1, ...r }));
+}
+
+function openStatsModal() {
+  const body     = document.getElementById('modal-body');
+  const ranks    = calculateStatRanking();
+  const medals   = ['🥇', '🥈', '🥉', '4위', '5위'];
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+
+  let html = `<div style="font-size:17px;font-weight:800;margin-bottom:14px">📊 공통 가능 시간대 TOP 5</div>`;
+
+  if (ranks.length === 0) {
+    html += `<div style="text-align:center;padding:24px 0;color:var(--text-muted);font-size:14px">아직 입력된 일정 데이터가 없습니다</div>`;
+  } else {
+    ranks.forEach(({ rank, count, members, ds, startSlot, endSlot }) => {
+      const [y, m, d] = ds.split('-').map(Number);
+      const dn        = dayNames[new Date(y, m - 1, d).getDay()];
+      const timeRange = `${startSlot} ~ ${addHalf(endSlot)}`;
+      const isLast    = rank === ranks.length;
+      html += `
+        <div style="padding:12px 0;${isLast ? '' : 'border-bottom:0.5px solid var(--border);'}">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <span style="font-size:15px;font-weight:800">${medals[rank - 1]} ${rank}위</span>
+            <span style="font-size:13px;font-weight:700;color:var(--blue);background:var(--blue-light);padding:2px 10px;border-radius:20px">${count}명 가능</span>
+          </div>
+          <div style="font-size:13px;color:var(--text);line-height:1.7;margin-bottom:4px">${members.join(', ')}</div>
+          <div style="font-size:12px;color:var(--text-muted)">📅 ${m}월 ${d}일 ${dn}요일 &nbsp; ⏰ ${timeRange}</div>
+        </div>`;
+    });
+  }
+
+  body.innerHTML = html;
+  document.getElementById('modal-overlay').classList.add('active');
+}
+window.openStatsModal = openStatsModal;
+
+
+// ================================================================
+//   조회 화면 (renderResultView)
+// ================================================================
+function openViewScreen() {
+  renderViewChips();
+  document.getElementById('view-body').innerHTML =
+    '<div style="text-align:center;padding:40px 0;color:var(--text-muted);font-size:14px">위에서 멤버를 선택하세요</div>';
+  showScreen('screen-view');
+}
+window.openViewScreen = openViewScreen;
+
+function renderViewChips() {
+  const cont = document.getElementById('view-chips');
+  cont.innerHTML = '';
+  (S.room?.members || []).forEach(name => {
+    const chip = document.createElement('div');
+    chip.className = 'view-chip';
+    chip.textContent = name;
+    chip.onclick = () => {
+      document.querySelectorAll('.view-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      renderResultView(name);
+    };
+    cont.appendChild(chip);
+  });
+}
+
+/** 특정 멤버의 전체 일정 표시 (renderResultView) */
+function renderResultView(memberName) {
+  const body  = document.getElementById('view-body');
+  const sched = S.allSched[memberName];
+
+  if (!sched) {
+    body.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text-muted)">
+      ${memberName}님의 일정이 아직 입력되지 않았습니다</div>`;
+    return;
+  }
+
+  body.innerHTML = `<div style="font-size:15px;font-weight:800;color:var(--blue);padding:0 0 12px">📋 ${memberName}님의 일정</div>`;
+
+  let hasAny = false;
+  MONTHS.forEach(m => {
+    for (let d = 1; d <= daysInMonth(YEAR, m); d++) {
+      const ds     = toDateStr(YEAR, m, d);
+      const pat    = patternForDate(sched, ds);
+      if (!pat) continue;
+      const ranges = mergeRanges(pat);
+      if (ranges.length === 0) continue;
+
+      hasAny = true;
+      const sec  = document.createElement('div');
+      sec.className = 'view-section';
+      sec.innerHTML = `
+        <div class="view-section-head">${fmtDate(ds)}</div>
+        <div class="view-section-body">
+          ${ranges.map(r => `<div class="view-time-line">⏰ ${r}</div>`).join('')}
+        </div>
+      `;
+      body.appendChild(sec);
+    }
+  });
+
+  if (!hasAny) {
+    body.innerHTML += `<div style="text-align:center;color:var(--text-muted);padding:20px 0;font-size:14px">
+      가능한 시간대가 없습니다</div>`;
+  }
+}
+
+
+// ================================================================
+//   초기화
+// ================================================================
+updateStatusBtns();
+showScreen('screen-landing');
+
+// 새로고침 자동 복구 — 실패해도 랜딩 화면 유지, 오류 표시 없음
+(async () => {
+  const lastCode   = localStorage.getItem('lastRoomCode');
+  const lastMember = localStorage.getItem('lastMemberName');
+  if (!lastCode || !lastMember) return;
+
+  try {
+    if (lastCode === DEFAULT_ROOM.roomCode) {
+      await ensureDefaultRoom();
+    } else if (lastCode === ROOM_0002.roomCode) {
+      await ensureRoom0002();
+    } else {
+      const snap = await getDoc(doc(db, 'rooms', lastCode));
+      if (!snap.exists()) { localStorage.removeItem('lastRoomCode'); return; }
+      S.room = snap.data();
+      await loadAllSchedules(lastCode);
+    }
+    const members = S.room?.members || [];
+    if (members.includes(lastMember)) {
+      await selectMember(lastMember);
+    }
+  } catch (e) {
+    // 자동 복구 실패: 랜딩 화면에서 대기 (토스트 없음)
+    console.warn('자동 복구 실패:', e);
+  }
+})();
+
+</script>
+</body>
+</html>
