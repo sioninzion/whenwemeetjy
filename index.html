@@ -433,14 +433,15 @@
     .time-row-bar.unavailable { background: var(--red);   }
     .time-row-bar.tentative   { background: var(--amber); }
 
-    /* 오른쪽: 상태 버튼 3개 */
+    /* 오른쪽: 상태 버튼 */
     .status-col {
-      width: 72px; display: flex; flex-direction: column; justify-content: center;
-      gap: 8px; padding: 10px 8px 10px 0; background: var(--white);
+      width: 90px; display: flex; flex-direction: column; justify-content: center;
+      gap: 5px; padding: 8px 6px 8px 0; background: var(--white);
       border-left: 1px solid var(--border); flex-shrink: 0;
     }
+    .stat-row { display: flex; gap: 4px; }
     .stat-btn {
-      padding: 10px 0; border-radius: 10px; border: 2.5px solid transparent;
+      flex: 1; padding: 10px 0; border-radius: 10px; border: 2.5px solid transparent;
       font-size: 11px; font-weight: 800; cursor: pointer; text-align: center;
       transition: var(--tr); line-height: 1.4;
     }
@@ -448,6 +449,8 @@
     .stat-btn.s-available   { background: var(--green-light); color: var(--green-dark); }
     .stat-btn.s-unavailable { background: var(--red-light);   color: var(--red);        }
     .stat-btn.s-tentative   { background: var(--amber-light); color: var(--amber);      }
+    .stat-btn.s-page        { background: var(--gray-light);  color: var(--text-muted); }
+    .stat-btn.s-page.active { background: var(--blue-light);  color: var(--blue); border-color: var(--blue); }
     .stat-btn.active { border-color: currentColor; box-shadow: 0 2px 8px rgba(0,0,0,0.15); transform: scale(1.06); }
 
     /* 저장 바 (시간 입력 하단) */
@@ -669,7 +672,7 @@
     <div class="form-group">
       <div class="label">방 코드</div>
       <input type="text" class="input-field" id="join-code" value="0001"
-             placeholder="방 코드 입력"
+             placeholder="방 코드 입력" maxlength="4"
              style="text-align:center;font-size:28px;font-weight:900;letter-spacing:6px"
              oninput="this.value=this.value.toUpperCase();document.getElementById('join-err').style.display='none'">
     </div>
@@ -820,7 +823,7 @@
   <div class="time-header">
     <button class="back-btn" onclick="backFromTime()">‹</button>
     <div class="time-header-title" id="time-header-title">월요일 5월</div>
-    <div class="time-fill-count" id="time-fill-count">0/33</div>
+    <div class="time-fill-count" id="time-fill-count">0/18</div>
   </div>
 
   <div class="time-body">
@@ -830,15 +833,17 @@
     </div>
     <!-- 오른쪽: 상태 선택 버튼 -->
     <div class="status-col">
-      <button class="stat-btn s-available active" id="sBtn-available" onclick="selectStatus('available')">
-        가능<br>✓
-      </button>
-      <button class="stat-btn s-unavailable" id="sBtn-unavailable" onclick="selectStatus('unavailable')">
-        불가<br>✗
-      </button>
-      <button class="stat-btn s-tentative" id="sBtn-tentative" onclick="selectStatus('tentative')">
-        미확<br>?
-      </button>
+      <div class="stat-row">
+        <button class="stat-btn s-available active" id="sBtn-available" onclick="selectStatus('available')">가능<br>✓</button>
+        <button class="stat-btn s-unavailable" id="sBtn-unavailable" onclick="selectStatus('unavailable')">불가<br>✗</button>
+      </div>
+      <div class="stat-row">
+        <button class="stat-btn s-tentative" id="sBtn-tentative" onclick="selectStatus('tentative')">미확<br>?</button>
+      </div>
+      <div class="stat-row">
+        <button class="stat-btn s-page active" id="sBtn-page1" onclick="switchTimePage(1)">1/2</button>
+        <button class="stat-btn s-page" id="sBtn-page2" onclick="switchTimePage(2)">2/2</button>
+      </div>
     </div>
   </div>
 
@@ -956,7 +961,7 @@
 import { initializeApp } from
   'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import {
-  getFirestore, doc, setDoc, getDoc, collection, getDocs, serverTimestamp
+  getFirestore, doc, setDoc, getDoc, collection, getDocs, serverTimestamp, deleteDoc
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 const firebaseConfig = {
@@ -987,23 +992,31 @@ const DAY_FULL  = ['월요일','화요일','수요일','목요일','금요일','
 const DEFAULT_ROOM = {
   roomName:    '스킷드라마 공연팀',
   roomCode:    '0001',
-  members:     ['이우주','함유빈','김승민','노시온','최정현','이예슬','유희원','김지원','김범서','한예진','김완재'],
+  members:     ['이우주','함유빈','김승민','노시온','최정현','이예슬','유희원','김지원6','김범서','한예진','김완재'],
   memberCount: 11,
   year:        YEAR,
   months:      MONTHS
 };
 
-// 시간 슬롯: 07:00 ~ 23:00, 30분 단위 → 총 33개
-// 07:00, 07:30, 08:00, ..., 22:30, 23:00
+const ROOM_0002 = {
+  roomName:    '몽골선교 워십팀',
+  roomCode:    '0002',
+  members:     ['이예진','김지은','함유빈','권오준','남시은','우성원','이형준'],
+  memberCount: 7,
+  year:        YEAR,
+  months:      MONTHS
+};
+
+// 시간 슬롯: 09:00 ~ 17:30, 30분 단위 → 총 18개 (1/2: 09:00~13:00, 2/2: 13:30~17:30)
 function buildTimeSlots() {
   const s = [];
-  for (let h = 7; h <= 23; h++) {
+  for (let h = 9; h <= 17; h++) {
     s.push(`${pad2(h)}:00`);
-    if (h < 23) s.push(`${pad2(h)}:30`);
+    s.push(`${pad2(h)}:30`);
   }
   return s;
 }
-const TIME_SLOTS = buildTimeSlots(); // 33개
+const TIME_SLOTS = buildTimeSlots(); // 18개
 
 
 // ================================================================
@@ -1034,6 +1047,9 @@ const S = {
   excMonth: 5,          // 특수사항 달력 월
 
   availMap: null,       // 캐시된 가용성 맵
+
+  timePage:        1,   // 시간 입력 페이지 (1 또는 2)
+  timeEditPattern: {},  // 페이지 전환 중 전체 슬롯 버퍼
 };
 
 
@@ -1196,10 +1212,52 @@ async function ensureDefaultRoom() {
     });
     S.room = { ...DEFAULT_ROOM };
   } else {
-    S.room = snap.data();
+    // 이름 변경 마이그레이션 실행 (이미 완료됐으면 자동 스킵)
+    await renameMember(DEFAULT_ROOM.roomCode, '김지원', '김지원6');
+    const refreshed = await getDoc(roomRef);
+    S.room = refreshed.data();
     if (!S.room.members) S.room.members = DEFAULT_ROOM.members;
   }
   await loadAllSchedules(DEFAULT_ROOM.roomCode);
+}
+
+// 멤버 이름 변경: 방 문서 members 배열 + schedules 문서 이름 변경
+async function renameMember(roomCode, oldName, newName) {
+  const roomRef  = doc(db, 'rooms', roomCode);
+  const roomSnap = await getDoc(roomRef);
+  if (!roomSnap.exists()) return;
+  const roomData = roomSnap.data();
+  if (!roomData.members || !roomData.members.includes(oldName)) return; // 이미 완료됨
+
+  // schedules 문서 복사 후 원본 삭제
+  const oldSchedRef = doc(db, 'rooms', roomCode, 'schedules', oldName);
+  const newSchedRef = doc(db, 'rooms', roomCode, 'schedules', newName);
+  const schedSnap = await getDoc(oldSchedRef);
+  if (schedSnap.exists()) {
+    await setDoc(newSchedRef, { ...schedSnap.data(), memberName: newName });
+    await deleteDoc(oldSchedRef);
+  }
+
+  // 방 멤버 목록 업데이트
+  const newMembers = roomData.members.map(m => m === oldName ? newName : m);
+  await setDoc(roomRef, { ...roomData, members: newMembers, memberCount: newMembers.length });
+}
+
+async function ensureRoom0002() {
+  const roomRef = doc(db, 'rooms', ROOM_0002.roomCode);
+  const snap    = await getDoc(roomRef);
+  if (!snap.exists()) {
+    await setDoc(roomRef, {
+      ...ROOM_0002,
+      createdAt: serverTimestamp(),
+      fixedRoom: true
+    });
+    S.room = { ...ROOM_0002 };
+  } else {
+    S.room = snap.data();
+    if (!S.room.members) S.room.members = ROOM_0002.members;
+  }
+  await loadAllSchedules(ROOM_0002.roomCode);
 }
 
 // ================================================================
@@ -1280,8 +1338,9 @@ async function joinRoom() {
 
   try {
     if (code === DEFAULT_ROOM.roomCode) {
-      // 기본 방 0001: 없으면 자동 생성
       await ensureDefaultRoom();
+    } else if (code === ROOM_0002.roomCode) {
+      await ensureRoom0002();
     } else {
       const snap = await getDoc(doc(db, 'rooms', code));
       if (!snap.exists()) {
@@ -1725,21 +1784,25 @@ function openWeekdayTimeInput(dk, month) {
 
   const mk      = `${YEAR}-${pad2(month)}-${dk}`;
   const existing = S.mySched.weeklyPattern[mk] || {};
-  renderTimeGrid(existing);
+  S.timeEditPattern = { ...existing };
+  S.timePage = 1;
+  renderTimeGrid(S.timeEditPattern);
 
   S.selStatus = 'available';
   updateStatusBtns();
+  updatePageBtns();
   showScreen('screen-time');
 }
 
 // ================================================================
-//   시간 그리드 렌더링 (renderTimeGrid)
+//   시간 그리드 렌더링 (renderTimeGrid) — 현재 페이지 9칸만 표시
 // ================================================================
-function renderTimeGrid(existingPattern) {
+function renderTimeGrid(fullPattern) {
   const col = document.getElementById('time-slots-col');
   col.innerHTML = '';
 
-  TIME_SLOTS.forEach(slot => {
+  const pageSlots = TIME_SLOTS.slice((S.timePage - 1) * 9, S.timePage * 9);
+  pageSlots.forEach(slot => {
     const row = document.createElement('div');
     row.className = 'time-row';
     row.dataset.slot = slot;
@@ -1749,14 +1812,13 @@ function renderTimeGrid(existingPattern) {
     lbl.textContent = slot;
 
     const bar = document.createElement('div');
-    const st  = existingPattern[slot] || '';
+    const st  = fullPattern[slot] || '';
     bar.className   = `time-row-bar${st ? ' ' + st : ''}`;
     bar.dataset.st  = st;
 
     row.appendChild(lbl);
     row.appendChild(bar);
 
-    // 탭 → 현재 선택 상태로 색칠 (터치 드래그 지원)
     row.addEventListener('click', () => {
       applyStatus(bar);
       updateFillCount();
@@ -1770,23 +1832,44 @@ function renderTimeGrid(existingPattern) {
   checkTimeSaveBtn();
 }
 
+/** 현재 페이지 DOM 값을 버퍼에 반영 */
+function flushTimePageToBuffer() {
+  document.querySelectorAll('.time-row').forEach(row => {
+    S.timeEditPattern[row.dataset.slot] = row.querySelector('.time-row-bar').dataset.st || '';
+  });
+}
+
+/** 페이지 전환 */
+function switchTimePage(page) {
+  flushTimePageToBuffer();
+  S.timePage = page;
+  renderTimeGrid(S.timeEditPattern);
+  updatePageBtns();
+}
+window.switchTimePage = switchTimePage;
+
+function updatePageBtns() {
+  document.getElementById('sBtn-page1').classList.toggle('active', S.timePage === 1);
+  document.getElementById('sBtn-page2').classList.toggle('active', S.timePage === 2);
+}
+
 /** 바에 현재 상태 적용 */
 function applyStatus(bar) {
   bar.className  = `time-row-bar ${S.selStatus}`;
   bar.dataset.st = S.selStatus;
 }
 
-/** 채워진 슬롯 수 표시 */
+/** 채워진 슬롯 수 표시 (전체 18칸 기준) */
 function updateFillCount() {
-  const bars   = document.querySelectorAll('.time-row-bar');
-  const filled = [...bars].filter(b => b.dataset.st && b.dataset.st !== '').length;
+  flushTimePageToBuffer();
+  const filled = TIME_SLOTS.filter(s => S.timeEditPattern[s] && S.timeEditPattern[s] !== '').length;
   document.getElementById('time-fill-count').textContent = `${filled}/${TIME_SLOTS.length}`;
 }
 
-/** 저장 버튼 활성화 여부 */
+/** 저장 버튼 활성화 여부 (전체 18칸 모두 채워야) */
 function checkTimeSaveBtn() {
-  const bars  = document.querySelectorAll('.time-row-bar');
-  const allOk = [...bars].every(b => b.dataset.st && b.dataset.st !== '');
+  flushTimePageToBuffer();
+  const allOk = TIME_SLOTS.every(s => S.timeEditPattern[s] && S.timeEditPattern[s] !== '');
   const btn   = document.getElementById('time-save-btn');
   btn.disabled     = !allOk;
   btn.style.opacity = allOk ? '1' : '0.45';
@@ -1838,12 +1921,10 @@ function updateStatusBtns() {
   });
 }
 
-/** 전체 시간 슬롯을 한 번에 채우기 */
+/** 전체 18칸을 한 번에 채우기 */
 function fillAll(status) {
-  document.querySelectorAll('.time-row-bar').forEach(bar => {
-    bar.className = `time-row-bar ${status}`;
-    bar.dataset.st = status;
-  });
+  TIME_SLOTS.forEach(slot => { S.timeEditPattern[slot] = status; });
+  renderTimeGrid(S.timeEditPattern);
   updateFillCount();
   checkTimeSaveBtn();
 }
@@ -1854,14 +1935,8 @@ window.fillAll = fillAll;
 //   시간 입력 저장 (saveTimeInput)
 // ================================================================
 function saveTimeInput() {
-  // 그리드에서 패턴 수집
-  const bars    = document.querySelectorAll('.time-row-bar');
-  const pattern = {};
-  document.querySelectorAll('.time-row').forEach(row => {
-    const slot = row.dataset.slot;
-    const bar  = row.querySelector('.time-row-bar');
-    pattern[slot] = bar.dataset.st || '';
-  });
+  flushTimePageToBuffer();
+  const pattern = { ...S.timeEditPattern };
 
   const ctx = S.inputCtx;
   if (!ctx) return;
@@ -1891,20 +1966,13 @@ window.saveTimeInput = saveTimeInput;
 
 /** 시간 입력 → 뒤로가기 (부분 저장) */
 function backFromTime() {
-  // 채워진 슬롯만 임시 반영
+  flushTimePageToBuffer();
   const ctx = S.inputCtx;
-  if (ctx) {
-    const pattern = {};
-    document.querySelectorAll('.time-row').forEach(row => {
-      const st = row.querySelector('.time-row-bar').dataset.st;
-      if (st) pattern[row.dataset.slot] = st;
-    });
-    if (ctx.type === 'weekday') {
-      const mk = `${YEAR}-${pad2(ctx.month)}-${ctx.dayKey}`;
-      S.mySched.weeklyPattern[mk] = Object.assign(
-        S.mySched.weeklyPattern[mk] || {}, pattern
-      );
-    }
+  if (ctx && ctx.type === 'weekday') {
+    const mk = `${YEAR}-${pad2(ctx.month)}-${ctx.dayKey}`;
+    S.mySched.weeklyPattern[mk] = Object.assign(
+      S.mySched.weeklyPattern[mk] || {}, S.timeEditPattern
+    );
   }
   showScreen(S.prevScreen);
   if (S.prevScreen === 'screen-input') renderWeekdayTabs();
@@ -2033,9 +2101,12 @@ function openExcTimeInput(dateStr) {
   document.getElementById('time-header-title').textContent =
     fmtDate(dateStr) + ' (예외)';
   const existing = S.mySched.exceptions[dateStr] || {};
-  renderTimeGrid(existing);
+  S.timeEditPattern = { ...existing };
+  S.timePage = 1;
+  renderTimeGrid(S.timeEditPattern);
   S.selStatus = 'available';
   updateStatusBtns();
+  updatePageBtns();
   showScreen('screen-time');
 }
 
@@ -2299,6 +2370,8 @@ showScreen('screen-landing');
   try {
     if (lastCode === DEFAULT_ROOM.roomCode) {
       await ensureDefaultRoom();
+    } else if (lastCode === ROOM_0002.roomCode) {
+      await ensureRoom0002();
     } else {
       const snap = await getDoc(doc(db, 'rooms', lastCode));
       if (!snap.exists()) { localStorage.removeItem('lastRoomCode'); return; }
