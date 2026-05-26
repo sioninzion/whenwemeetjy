@@ -993,15 +993,6 @@ const DEFAULT_ROOM = {
   months:      MONTHS
 };
 
-const ROOM_0002 = {
-  roomName:    '몽골선교 워십팀',
-  roomCode:    '0002',
-  members:     ['이예진','김지은','함유빈','권오준','남시은','우성원','이형준'],
-  memberCount: 7,
-  year:        YEAR,
-  months:      MONTHS
-};
-
 // 시간 슬롯: 07:00 ~ 23:00, 30분 단위 → 총 33개
 // 07:00, 07:30, 08:00, ..., 22:30, 23:00
 function buildTimeSlots() {
@@ -1211,23 +1202,6 @@ async function ensureDefaultRoom() {
   await loadAllSchedules(DEFAULT_ROOM.roomCode);
 }
 
-async function ensureRoom0002() {
-  const roomRef = doc(db, 'rooms', ROOM_0002.roomCode);
-  const snap    = await getDoc(roomRef);
-  if (!snap.exists()) {
-    await setDoc(roomRef, {
-      ...ROOM_0002,
-      createdAt: serverTimestamp(),
-      fixedRoom: true
-    });
-    S.room = { ...ROOM_0002 };
-  } else {
-    S.room = snap.data();
-    if (!S.room.members) S.room.members = ROOM_0002.members;
-  }
-  await loadAllSchedules(ROOM_0002.roomCode);
-}
-
 // ================================================================
 //   랜딩 내비게이션
 // ================================================================
@@ -1308,9 +1282,6 @@ async function joinRoom() {
     if (code === DEFAULT_ROOM.roomCode) {
       // 기본 방 0001: 없으면 자동 생성
       await ensureDefaultRoom();
-    } else if (code === ROOM_0002.roomCode) {
-      // 기본 방 0002: 없으면 자동 생성
-      await ensureRoom0002();
     } else {
       const snap = await getDoc(doc(db, 'rooms', code));
       if (!snap.exists()) {
@@ -2328,8 +2299,6 @@ showScreen('screen-landing');
   try {
     if (lastCode === DEFAULT_ROOM.roomCode) {
       await ensureDefaultRoom();
-    } else if (lastCode === ROOM_0002.roomCode) {
-      await ensureRoom0002();
     } else {
       const snap = await getDoc(doc(db, 'rooms', lastCode));
       if (!snap.exists()) { localStorage.removeItem('lastRoomCode'); return; }
