@@ -756,7 +756,10 @@
         <button onclick="showScreen('screen-join')" style="background:var(--gray-light);border:none;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;color:var(--text-muted);cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent">변경</button>
       </div>
     </div>
-    <button class="btn btn-primary main-input-btn" onclick="openInputScreen()">입력하기</button>
+    <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+      <button id="import-btn" style="display:none;background:var(--blue-light);border:1.5px solid var(--blue);border-radius:10px;padding:8px 14px;font-size:13px;font-weight:800;color:var(--blue);cursor:pointer;-webkit-tap-highlight-color:transparent">불러오기</button>
+      <button class="btn btn-primary main-input-btn" onclick="openInputScreen()">입력하기</button>
+    </div>
   </div>
 
   <!-- 달력 영역 (약 55%) -->
@@ -864,7 +867,6 @@
   <div class="time-header">
     <button class="back-btn" onclick="backFromTime()">‹</button>
     <div class="time-header-title" id="time-header-title">월요일 5월</div>
-    <button id="import-btn" onclick="openImportModal()" style="display:none;background:var(--blue-light);border:none;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:800;color:var(--blue);cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent">불러오기</button>
     <div class="time-fill-count" id="time-fill-count">0/29</div>
   </div>
 
@@ -966,8 +968,8 @@
 </div>
 
 <!-- 불러오기 모달 (중앙 다이얼로그) -->
-<div class="import-overlay" id="import-overlay" onclick="closeImportModal()">
-  <div class="import-box" onclick="event.stopPropagation()">
+<div class="import-overlay" id="import-overlay">
+  <div class="import-box">
     <div id="import-content"></div>
   </div>
 </div>
@@ -1053,6 +1055,15 @@ const ROOM_0002 = {
   roomCode:    '0002',
   members:     ['이예진','김지은','함유빈','권오준','남시은','우성원','이형준'],
   memberCount: 7,
+  year:        YEAR,
+  months:      MONTHS
+};
+
+const ROOM_0003 = {
+  roomName:    'K-POP공연팀',
+  roomCode:    '0003',
+  members:     ['이찬미','김지원7','이예현','김우림','김용빈','한수호'],
+  memberCount: 6,
   year:        YEAR,
   months:      MONTHS
 };
@@ -1311,6 +1322,23 @@ async function ensureRoom0002() {
   await loadAllSchedules(ROOM_0002.roomCode);
 }
 
+async function ensureRoom0003() {
+  const roomRef = doc(db, 'rooms', ROOM_0003.roomCode);
+  const snap    = await getDoc(roomRef);
+  if (!snap.exists()) {
+    await setDoc(roomRef, {
+      ...ROOM_0003,
+      createdAt: serverTimestamp(),
+      fixedRoom: true
+    });
+    S.room = { ...ROOM_0003 };
+  } else {
+    S.room = snap.data();
+    if (!S.room.members) S.room.members = ROOM_0003.members;
+  }
+  await loadAllSchedules(ROOM_0003.roomCode);
+}
+
 // ================================================================
 //   랜딩 내비게이션
 // ================================================================
@@ -1392,6 +1420,8 @@ async function joinRoom() {
       await ensureDefaultRoom();
     } else if (code === ROOM_0002.roomCode) {
       await ensureRoom0002();
+    } else if (code === ROOM_0003.roomCode) {
+      await ensureRoom0003();
     } else {
       const snap = await getDoc(doc(db, 'rooms', code));
       if (!snap.exists()) {
@@ -1485,6 +1515,7 @@ async function selectMember(name) {
   S.availMap = null; // 캐시 초기화
   renderCalendar();
   renderBottomSummary();
+  updateImportBtn();
   showScreen('screen-main');
 }
 window.selectMember = selectMember;
@@ -1842,7 +1873,6 @@ function openWeekdayTimeInput(dk, month) {
   S.selStatus = 'available';
   updateStatusBtns();
   updatePageBtns();
-  updateImportBtn();
   showScreen('screen-time');
 }
 
@@ -2161,7 +2191,6 @@ function openExcTimeInput(dateStr) {
   S.selStatus = 'available';
   updateStatusBtns();
   updatePageBtns();
-  updateImportBtn();
   showScreen('screen-time');
 }
 
@@ -2427,6 +2456,8 @@ showScreen('screen-landing');
       await ensureDefaultRoom();
     } else if (lastCode === ROOM_0002.roomCode) {
       await ensureRoom0002();
+    } else if (lastCode === ROOM_0003.roomCode) {
+      await ensureRoom0003();
     } else {
       const snap = await getDoc(doc(db, 'rooms', lastCode));
       if (!snap.exists()) { localStorage.removeItem('lastRoomCode'); return; }
@@ -2450,7 +2481,7 @@ showScreen('screen-landing');
 
 /** 현재 멤버가 속한 다른 방 목록 반환 */
 function getOtherRoomsForMember(memberName) {
-  const allRooms = [DEFAULT_ROOM, ROOM_0002];
+  const allRooms   = [DEFAULT_ROOM, ROOM_0002, ROOM_0003];
   const currentCode = S.room?.roomCode;
   return allRooms.filter(r => r.roomCode !== currentCode && r.members.includes(memberName));
 }
@@ -2463,34 +2494,14 @@ function updateImportBtn() {
   btn.style.display = others.length ? 'inline-block' : 'none';
 }
 
-/** 불러오기 모달 열기 */
-function openImportModal() {
-  const otherRooms = getOtherRoomsForMember(S.member);
-  if (!otherRooms.length) return;
-  renderImportStep1(otherRooms);
-  document.getElementById('import-overlay').classList.add('active');
+/** 불러오기 모달 닫기 */
+function closeImportModal() {
+  document.getElementById('import-overlay').classList.remove('active');
 }
-window.openImportModal = openImportModal;
 
-/** 1단계: 방 선택 */
-function renderImportStep1(rooms) {
+/** 2단계: 확인 화면 렌더링 */
+function renderImportConfirm(roomCode, roomName) {
   const content = document.getElementById('import-content');
-  content.innerHTML = `
-    <div class="import-title">세션을 불러올 방을 선택하세요</div>
-    ${rooms.map(r => `
-      <button class="import-room-btn" onclick="renderImportStep2('${r.roomCode}','${encodeURIComponent(r.roomName)}')">
-        ${r.roomCode} · ${r.roomName}
-      </button>
-    `).join('')}
-    <button class="import-cancel-btn" onclick="closeImportModal()">취소</button>
-  `;
-}
-window.renderImportStep1 = renderImportStep1;
-
-/** 2단계: 확인 */
-function renderImportStep2(roomCode, roomNameEncoded) {
-  const roomName = decodeURIComponent(roomNameEncoded);
-  const content  = document.getElementById('import-content');
   content.innerHTML = `
     <div class="import-title">
       정말 <span style="color:var(--blue)">${roomCode}방</span>의<br>
@@ -2498,15 +2509,50 @@ function renderImportStep2(roomCode, roomNameEncoded) {
       설정을 불러오시겠습니까?
     </div>
     <div class="import-confirm-row">
-      <button class="import-no-btn"  onclick="closeImportModal()">아니오</button>
-      <button class="import-yes-btn" onclick="executeImport('${roomCode}')">네</button>
+      <button class="import-no-btn"  id="import-no-btn">아니오</button>
+      <button class="import-yes-btn" id="import-yes-btn">네</button>
     </div>
   `;
+  document.getElementById('import-no-btn').addEventListener('click', closeImportModal);
+  document.getElementById('import-yes-btn').addEventListener('click', () => doImport(roomCode));
 }
-window.renderImportStep2 = renderImportStep2;
+
+/** 1단계: 방 선택 화면 렌더링 */
+function renderImportRoomList(rooms) {
+  const content = document.getElementById('import-content');
+  content.innerHTML = `<div class="import-title">세션을 불러올 방을 선택하세요</div>`;
+
+  rooms.forEach(r => {
+    const btn = document.createElement('button');
+    btn.className   = 'import-room-btn';
+    btn.textContent = `${r.roomCode} · ${r.roomName}`;
+    btn.addEventListener('click', () => renderImportConfirm(r.roomCode, r.roomName));
+    content.appendChild(btn);
+  });
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className   = 'import-cancel-btn';
+  cancelBtn.textContent = '취소';
+  cancelBtn.addEventListener('click', closeImportModal);
+  content.appendChild(cancelBtn);
+}
+
+/** 불러오기 모달 열기 */
+function openImportModal() {
+  const otherRooms = getOtherRoomsForMember(S.member);
+  if (!otherRooms.length) return;
+  renderImportRoomList(otherRooms);
+  document.getElementById('import-overlay').classList.add('active');
+}
+document.getElementById('import-btn').addEventListener('click', openImportModal);
+
+// 오버레이 바깥 클릭 시 닫기
+document.getElementById('import-overlay').addEventListener('click', closeImportModal);
+document.getElementById('import-overlay').querySelector('.import-box')
+  .addEventListener('click', e => e.stopPropagation());
 
 /** 실제 불러오기 실행 */
-async function executeImport(sourceRoomCode) {
+async function doImport(sourceRoomCode) {
   const memberName     = S.member;
   const targetRoomCode = S.room.roomCode;
 
@@ -2545,17 +2591,10 @@ async function executeImport(sourceRoomCode) {
     closeImportModal();
     toast(`✅ ${sourceRoomCode}방의 일정을 불러왔습니다!`);
 
-    // 현재 열려 있는 시간 입력 화면을 새 데이터로 갱신
-    const ctx = S.inputCtx;
-    if (ctx && ctx.type === 'weekday') {
-      const mk = `${YEAR}-${pad2(ctx.month)}-${ctx.dayKey}`;
-      S.timeEditPattern = { ...(S.mySched.weeklyPattern[mk] || {}) };
-    } else if (ctx && ctx.type === 'exception') {
-      S.timeEditPattern = { ...(S.mySched.exceptions[ctx.dateStr] || {}) };
-    }
-    renderTimeGrid(S.timeEditPattern);
-    updateFillCount();
-    checkTimeSaveBtn();
+    // 메인 화면 갱신
+    renderCalendar();
+    renderBottomSummary();
+    renderTopDates();
 
   } catch (e) {
     console.error(e);
@@ -2563,13 +2602,6 @@ async function executeImport(sourceRoomCode) {
     toast('불러오기 실패: ' + e.message);
   }
 }
-window.executeImport = executeImport;
-
-/** 불러오기 모달 닫기 */
-function closeImportModal() {
-  document.getElementById('import-overlay').classList.remove('active');
-}
-window.closeImportModal = closeImportModal;
 
 </script>
 </body>
